@@ -171,6 +171,45 @@ func (s *PaymentScheduleService) GetOverduePayments(debtList *models.DebtList, d
 	return overdue
 }
 
+// CalculateDueDateFromNumberOfPayments calculates the due date based on number of payments and installment plan
+func (s *PaymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt time.Time, numberOfPayments int, installmentPlan string) time.Time {
+	if numberOfPayments <= 0 {
+		numberOfPayments = 1
+	}
+
+	var dueDate time.Time
+	switch installmentPlan {
+	case "weekly":
+		// Each payment is 7 days apart
+		dueDate = createdAt.AddDate(0, 0, (numberOfPayments-1)*7)
+	case "biweekly":
+		// Each payment is 14 days apart
+		dueDate = createdAt.AddDate(0, 0, (numberOfPayments-1)*14)
+	case "monthly":
+		// Each payment is 1 month apart
+		dueDate = createdAt.AddDate(0, numberOfPayments-1, 0)
+	case "quarterly":
+		// Each payment is 3 months apart
+		dueDate = createdAt.AddDate(0, (numberOfPayments-1)*3, 0)
+	case "yearly":
+		// Each payment is 1 year apart
+		dueDate = createdAt.AddDate(numberOfPayments-1, 0, 0)
+	default:
+		// Default to monthly
+		dueDate = createdAt.AddDate(0, numberOfPayments-1, 0)
+	}
+
+	return dueDate
+}
+
+// CalculateInstallmentAmountFromNumberOfPayments calculates the installment amount based on total amount and number of payments
+func (s *PaymentScheduleService) CalculateInstallmentAmountFromNumberOfPayments(totalAmount decimal.Decimal, numberOfPayments int) decimal.Decimal {
+	if numberOfPayments <= 0 {
+		numberOfPayments = 1
+	}
+	return totalAmount.Div(decimal.NewFromInt(int64(numberOfPayments)))
+}
+
 // CalculateInstallmentAmount calculates the installment amount based on total amount, installment plan, and time period
 func (s *PaymentScheduleService) CalculateInstallmentAmount(totalAmount decimal.Decimal, installmentPlan string, createdAt time.Time, dueDate time.Time) decimal.Decimal {
 	numberOfPayments := s.CalculateNumberOfPayments(installmentPlan, createdAt, dueDate)

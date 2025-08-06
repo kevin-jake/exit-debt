@@ -40,14 +40,34 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 		return nil, errors.New("invalid total amount format")
 	}
 
-	// Calculate installment amount automatically based on time period
-	createdAt := time.Now()
-	installmentAmount := s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, req.InstallmentPlan, createdAt, req.DueDate)
-
 	// Set default currency if not provided
 	currency := req.Currency
 	if currency == "" {
 		currency = "Php"
+	}
+
+	// Determine due date and installment amount based on input
+	var dueDate time.Time
+	var installmentAmount decimal.Decimal
+	var numberOfPayments *int
+
+	createdAt := time.Now()
+
+	if req.NumberOfPayments != nil && *req.NumberOfPayments > 0 {
+		// Use number of payments to calculate due date and installment amount
+		numberOfPayments = req.NumberOfPayments
+		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, *req.NumberOfPayments, req.InstallmentPlan)
+		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, *req.NumberOfPayments)
+	} else if req.DueDate != nil {
+		// Use provided due date (existing behavior)
+		dueDate = *req.DueDate
+		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, req.InstallmentPlan, createdAt, dueDate)
+	} else {
+		// Default to 1 payment if neither is provided
+		defaultPayments := 1
+		numberOfPayments = &defaultPayments
+		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, defaultPayments, req.InstallmentPlan)
+		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, defaultPayments)
 	}
 
 	debtList := &models.DebtList{
@@ -61,16 +81,17 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 		TotalRemainingDebt: totalAmount,
 		Currency:          currency,
 		Status:            "active",
-		DueDate:           req.DueDate,
+		DueDate:           dueDate,
 		NextPaymentDate:   s.paymentScheduleService.CalculateNextPaymentDate(&models.DebtList{
 			InstallmentPlan: req.InstallmentPlan,
-			CreatedAt:       time.Now(),
+			CreatedAt:       createdAt,
 		}, nil),
 		InstallmentPlan:   req.InstallmentPlan,
+		NumberOfPayments:  numberOfPayments,
 		Description:       req.Description,
 		Notes:             req.Notes,
-		CreatedAt:         time.Now(),
-		UpdatedAt:         time.Now(),
+		CreatedAt:         createdAt,
+		UpdatedAt:         createdAt,
 	}
 
 	if err := s.db.Create(debtList).Error; err != nil {
@@ -115,14 +136,30 @@ func (s *DebtServiceGORM) UpdateDebtList(id uuid.UUID, userID uuid.UUID, req *mo
 			return nil, errors.New("invalid total amount format")
 		}
 		debtList.TotalAmount = totalAmount
-		// Recalculate installment amount
-		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
+		// Recalculate installment amount based on current settings
+		if debtList.NumberOfPayments != nil {
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, *debtList.NumberOfPayments)
+		} else {
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
+		}
 	}
 	
 	if req.InstallmentPlan != nil {
 		debtList.InstallmentPlan = *req.InstallmentPlan
-		// Recalculate installment amount
-		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, *req.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
+		// Recalculate installment amount and due date if number of payments is set
+		if debtList.NumberOfPayments != nil {
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(debtList.TotalAmount, *debtList.NumberOfPayments)
+			debtList.DueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(debtList.CreatedAt, *debtList.NumberOfPayments, *req.InstallmentPlan)
+		} else {
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, *req.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
+		}
+	}
+
+	if req.NumberOfPayments != nil {
+		debtList.NumberOfPayments = req.NumberOfPayments
+		// Recalculate installment amount and due date
+		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(debtList.TotalAmount, *req.NumberOfPayments)
+		debtList.DueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(debtList.CreatedAt, *req.NumberOfPayments, debtList.InstallmentPlan)
 	}
 	
 	if req.Currency != nil {
@@ -133,6 +170,10 @@ func (s *DebtServiceGORM) UpdateDebtList(id uuid.UUID, userID uuid.UUID, req *mo
 	}
 	if req.DueDate != nil {
 		debtList.DueDate = *req.DueDate
+		// If due date is manually set, clear number of payments as they're now independent
+		debtList.NumberOfPayments = nil
+		// Recalculate installment amount based on new due date
+		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, debtList.InstallmentPlan, debtList.CreatedAt, *req.DueDate)
 	}
 	if req.Description != nil {
 		debtList.Description = req.Description

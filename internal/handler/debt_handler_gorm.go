@@ -33,6 +33,12 @@ func (h *DebtHandlerGORM) CreateDebtList(c *gin.Context) {
 		return
 	}
 
+	// Custom validation to ensure either DueDate or NumberOfPayments is provided
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	debtList, err := h.debtService.CreateDebtList(userID.(uuid.UUID), &req)
 	fmt.Println("debtList", debtList)
 	if err != nil {

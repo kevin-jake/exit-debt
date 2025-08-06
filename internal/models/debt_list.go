@@ -1,11 +1,24 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
+
+// Struct-level validation for CreateDebtListRequest
+func (req CreateDebtListRequest) Validate() error {
+	hasDueDate := req.DueDate != nil
+	hasNumberOfPayments := req.NumberOfPayments != nil && *req.NumberOfPayments > 0
+	
+	if !hasDueDate && !hasNumberOfPayments {
+		return fmt.Errorf("either due_date or number_of_payments must be provided")
+	}
+	
+	return nil
+}
 
 type DebtList struct {
 	ID              uuid.UUID     `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
@@ -21,6 +34,7 @@ type DebtList struct {
 	DueDate         time.Time     `json:"due_date" gorm:"not null"`
 	NextPaymentDate time.Time     `json:"next_payment_date" gorm:"not null"`
 	InstallmentPlan string        `json:"installment_plan" gorm:"default:'monthly';check:installment_plan IN ('weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')"`
+	NumberOfPayments *int         `json:"number_of_payments" gorm:"default:null"`
 	Description     *string       `json:"description"`
 	Notes           *string       `json:"notes"`
 	CreatedAt       time.Time     `json:"created_at"`
@@ -37,8 +51,9 @@ type CreateDebtListRequest struct {
 	DebtType          string    `json:"debt_type" binding:"required,oneof=owed_to_me i_owe"`
 	TotalAmount       string    `json:"total_amount" binding:"required"`
 	Currency          string    `json:"currency"`
-	DueDate           time.Time `json:"due_date" binding:"required"`
+	DueDate           *time.Time `json:"due_date"`
 	InstallmentPlan   string    `json:"installment_plan" binding:"required,oneof=weekly biweekly monthly quarterly yearly"`
+	NumberOfPayments  *int      `json:"number_of_payments"`
 	Description       *string   `json:"description"`
 	Notes             *string   `json:"notes"`
 }
@@ -49,6 +64,7 @@ type UpdateDebtListRequest struct {
 	Status            *string    `json:"status"`
 	DueDate           *time.Time `json:"due_date"`
 	InstallmentPlan   *string    `json:"installment_plan"`
+	NumberOfPayments  *int       `json:"number_of_payments"`
 	Description       *string    `json:"description"`
 	Notes             *string    `json:"notes"`
 } 
