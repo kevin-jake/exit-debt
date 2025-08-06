@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
-	"go-debt-tracker/internal/models"
+	"exit-debt/internal/models"
 )
 
 type DebtServiceGORM struct {

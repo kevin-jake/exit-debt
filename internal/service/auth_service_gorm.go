@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"go-debt-tracker/internal/models"
+	"exit-debt/internal/models"
 )
 
 type AuthServiceGORM struct {

@@ -3,7 +3,7 @@ version: "3.8"
 services:
   postgres:
     image: postgres
-    container_name: go-debt-tracker-postgres
+    container_name: exit-debt-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: debt_tracker

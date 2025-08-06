@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"go-debt-tracker/internal/service"
+	"exit-debt/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

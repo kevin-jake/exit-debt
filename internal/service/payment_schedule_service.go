@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"go-debt-tracker/internal/models"
+	"exit-debt/internal/models"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"

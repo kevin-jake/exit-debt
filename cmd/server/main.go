@@ -9,11 +9,11 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"go-debt-tracker/internal/config"
-	"go-debt-tracker/internal/database"
-	"go-debt-tracker/internal/handler"
-	"go-debt-tracker/internal/middleware"
-	"go-debt-tracker/internal/service"
+	"exit-debt/internal/config"
+	"exit-debt/internal/database"
+	"exit-debt/internal/handler"
+	"exit-debt/internal/middleware"
+	"exit-debt/internal/service"
 )
 
 func main() {

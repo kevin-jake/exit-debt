@@ -1,4 +1,4 @@
-module go-debt-tracker
+module exit-debt
 
 go 1.23
 

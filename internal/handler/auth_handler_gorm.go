@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"go-debt-tracker/internal/models"
-	"go-debt-tracker/internal/service"
+	"exit-debt/internal/models"
+	"exit-debt/internal/service"
 
 	"github.com/gin-gonic/gin"
 )

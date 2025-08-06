@@ -33,7 +33,7 @@ A comprehensive debt tracking application built with Go, PostgreSQL, and Gin fra
 
 ```bash
 git clone <repository-url>
-cd go-debt-tracker
+cd exit-debt
 ```
 
 ### 2. Install dependencies

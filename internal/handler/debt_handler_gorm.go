@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"exit-debt/internal/models"
+	"exit-debt/internal/service"
 	"fmt"
-	"go-debt-tracker/internal/models"
-	"go-debt-tracker/internal/service"
 	"net/http"
 	"strconv"
 

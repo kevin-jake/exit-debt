@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"go-debt-tracker/internal/models"
+	"exit-debt/internal/models"
 )
 
 type ContactServiceGORM struct {
