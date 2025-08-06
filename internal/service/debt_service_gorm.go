@@ -70,6 +70,12 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, defaultPayments)
 	}
 
+	// Validate that due date is in the future
+	now := time.Now()
+	if dueDate.Before(now) || dueDate.Equal(now) {
+		return nil, errors.New("due date must be in the future")
+	}
+
 	debtList := &models.DebtList{
 		ID:                uuid.New(),
 		UserID:            userID,
@@ -179,6 +185,12 @@ func (s *DebtServiceGORM) UpdateDebtList(id uuid.UUID, userID uuid.UUID, req *mo
 		debtList.Status = *req.Status
 	}
 	if req.DueDate != nil {
+		// Validate that due date is in the future
+		now := time.Now()
+		if req.DueDate.Before(now) || req.DueDate.Equal(now) {
+			return nil, errors.New("due date must be in the future")
+		}
+		
 		debtList.DueDate = *req.DueDate
 		// If due date is manually set, clear number of payments as they're now independent
 		debtList.NumberOfPayments = nil
