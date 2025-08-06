@@ -101,25 +101,33 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 	return debtList, nil
 }
 
-func (s *DebtServiceGORM) GetDebtList(id uuid.UUID, userID uuid.UUID) (*models.DebtList, error) {
+func (s *DebtServiceGORM) GetDebtList(id uuid.UUID, userID uuid.UUID) (*models.DebtListResponse, error) {
 	var debtList models.DebtList
-	if err := s.db.Preload("Contact").Where("id = ? AND user_id = ?", id, userID).First(&debtList).Error; err != nil {
+	if err := s.db.Preload("Contact").Preload("User").Preload("Payments").Where("id = ? AND user_id = ?", id, userID).First(&debtList).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("debt list not found")
 		}
 		return nil, err
 	}
-	return &debtList, nil
+	
+	response := debtList.ToDebtListResponse()
+	return &response, nil
 }
 
-func (s *DebtServiceGORM) GetUserDebtLists(userID uuid.UUID) ([]models.DebtList, error) {
+func (s *DebtServiceGORM) GetUserDebtLists(userID uuid.UUID) ([]models.DebtListResponse, error) {
 	// Get debt lists that belong to the current user
 	var userDebtLists []models.DebtList
-	if err := s.db.Preload("Contact").Where("user_id = ?", userID).Find(&userDebtLists).Error; err != nil {
+	if err := s.db.Preload("Contact").Preload("User").Preload("Payments").Where("user_id = ?", userID).Find(&userDebtLists).Error; err != nil {
 		return nil, err
 	}
 
-	return userDebtLists, nil
+	// Convert to response models
+	responses := make([]models.DebtListResponse, len(userDebtLists))
+	for i, debtList := range userDebtLists {
+		responses[i] = debtList.ToDebtListResponse()
+	}
+
+	return responses, nil
 }
 
 func (s *DebtServiceGORM) UpdateDebtList(id uuid.UUID, userID uuid.UUID, req *models.UpdateDebtListRequest) (*models.DebtList, error) {
@@ -254,7 +262,7 @@ func (s *DebtServiceGORM) CreateDebtItem(userID uuid.UUID, req *models.CreateDeb
 
 func (s *DebtServiceGORM) GetDebtItem(id uuid.UUID, userID uuid.UUID) (*models.DebtItem, error) {
 	var debtItem models.DebtItem
-	if err := s.db.Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
+	if err := s.db.Preload("DebtList").Preload("DebtList.Contact").Preload("DebtList.User").Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
 		Where("debt_items.id = ? AND debt_lists.user_id = ?", id, userID).
 		First(&debtItem).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -267,7 +275,7 @@ func (s *DebtServiceGORM) GetDebtItem(id uuid.UUID, userID uuid.UUID) (*models.D
 
 func (s *DebtServiceGORM) GetDebtListItems(debtListID uuid.UUID, userID uuid.UUID) ([]models.DebtItem, error) {
 	var debtItems []models.DebtItem
-	if err := s.db.Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
+	if err := s.db.Preload("DebtList").Preload("DebtList.Contact").Preload("DebtList.User").Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
 		Where("debt_items.debt_list_id = ? AND debt_lists.user_id = ?", debtListID, userID).
 		Order("debt_items.created_at DESC").
 		Find(&debtItems).Error; err != nil {
