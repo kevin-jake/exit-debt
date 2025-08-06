@@ -25,9 +25,9 @@ func NewDebtServiceGORM(db *gorm.DB) *DebtServiceGORM {
 
 // Debt List Methods
 func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDebtListRequest) (*models.DebtList, error) {
-	// Verify contact exists and belongs to user
-	var contact models.Contact
-	if err := s.db.Where("id = ? AND user_id = ?", req.ContactID, userID).First(&contact).Error; err != nil {
+	// Verify contact exists and belongs to user using user_contacts table
+	var userContact models.UserContact
+	if err := s.db.Joins("Contact").Where("user_contacts.contact_id = ? AND user_contacts.user_id = ?", req.ContactID, userID).First(&userContact).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("contact not found")
 		}
@@ -113,11 +113,13 @@ func (s *DebtServiceGORM) GetDebtList(id uuid.UUID, userID uuid.UUID) (*models.D
 }
 
 func (s *DebtServiceGORM) GetUserDebtLists(userID uuid.UUID) ([]models.DebtList, error) {
-	var debtLists []models.DebtList
-	if err := s.db.Preload("Contact").Where("user_id = ?", userID).Order("contact_id ASC, debt_type ASC").Find(&debtLists).Error; err != nil {
+	// Get debt lists that belong to the current user
+	var userDebtLists []models.DebtList
+	if err := s.db.Preload("Contact").Where("user_id = ?", userID).Find(&userDebtLists).Error; err != nil {
 		return nil, err
 	}
-	return debtLists, nil
+
+	return userDebtLists, nil
 }
 
 func (s *DebtServiceGORM) UpdateDebtList(id uuid.UUID, userID uuid.UUID, req *models.UpdateDebtListRequest) (*models.DebtList, error) {

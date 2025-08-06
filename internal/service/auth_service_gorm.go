@@ -16,7 +16,7 @@ type AuthServiceGORM struct {
 	db        *gorm.DB
 	jwtSecret string
 	jwtExpiry time.Duration
-	debtSharingService *DebtSharingService
+	contactService *ContactServiceGORM
 }
 
 func NewAuthServiceGORM(db *gorm.DB, jwtSecret string, jwtExpiry string) (*AuthServiceGORM, error) {
@@ -29,7 +29,7 @@ func NewAuthServiceGORM(db *gorm.DB, jwtSecret string, jwtExpiry string) (*AuthS
 		db:        db,
 		jwtSecret: jwtSecret,
 		jwtExpiry: duration,
-		debtSharingService: NewDebtSharingService(db),
+		contactService: NewContactServiceGORM(db),
 	}, nil
 }
 
@@ -62,26 +62,14 @@ func (s *AuthServiceGORM) Register(req *models.CreateUserRequest) (*models.Regis
 		return nil, err
 	}
 
-	// Share debt lists if user email matches any contacts
-	var sharingSummary *models.SharingSummary
-	if err := s.debtSharingService.ShareDebtListsWithUser(user.ID, user.Email); err != nil {
+	// Create contacts for the new user based on existing contacts that have their email
+	if err := s.contactService.CreateContactsForNewUser(user.ID, user.Email); err != nil {
 		// Log the error but don't fail registration
 		// TODO: Add proper logging here
-	} else {
-		// Get sharing summary
-		summary, err := s.debtSharingService.GetSharingSummary(user.ID, user.Email)
-		if err == nil && summary != nil {
-			sharingSummary = &models.SharingSummary{
-				ContactsFound:     summary.ContactsFound,
-				DebtListsShared:   summary.DebtListsShared,
-				TotalAmountShared: summary.TotalAmountShared,
-			}
-		}
 	}
 
 	return &models.RegisterResponse{
 		User:    *user,
-		SharingSummary: sharingSummary,
 	}, nil
 }
 

@@ -33,7 +33,6 @@ func (h *AuthHandlerGORM) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully",
 		"user":    response.User,
-		"sharing_summary": response.SharingSummary,
 	})
 }
 

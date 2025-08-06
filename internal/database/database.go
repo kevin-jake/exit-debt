@@ -28,6 +28,7 @@ func NewDatabase(dsn string) (*Database, error) {
 		&models.User{},
 		&models.UserSettings{},
 		&models.Contact{},
+		&models.UserContact{},
 		&models.DebtList{},
 		&models.DebtItem{},
 		&models.Notification{},

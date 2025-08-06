@@ -17,7 +17,7 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	
 	// Relationships
-	Contacts   []Contact   `json:"contacts,omitempty" gorm:"foreignKey:UserID"`
+	Contacts   []Contact   `json:"contacts,omitempty" gorm:"many2many:user_contacts;"`
 	DebtLists []DebtList  `json:"debt_lists,omitempty" gorm:"foreignKey:UserID"`
 }
 
@@ -41,11 +41,4 @@ type LoginResponse struct {
 
 type RegisterResponse struct {
 	User    User    `json:"user"`
-	SharingSummary *SharingSummary `json:"sharing_summary,omitempty"`
-}
-
-type SharingSummary struct {
-	ContactsFound     int    `json:"contacts_found"`
-	DebtListsShared   int    `json:"debt_lists_shared"`
-	TotalAmountShared string `json:"total_amount_shared"`
 } 
