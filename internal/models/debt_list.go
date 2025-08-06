@@ -17,6 +17,11 @@ func (req CreateDebtListRequest) Validate() error {
 		return fmt.Errorf("either due_date or number_of_payments must be provided")
 	}
 	
+	// If number_of_payments is provided, installment_plan is required
+	if hasNumberOfPayments && req.InstallmentPlan == "" {
+		return fmt.Errorf("installment_plan is required when number_of_payments is provided")
+	}
+	
 	return nil
 }
 
@@ -33,7 +38,7 @@ type DebtList struct {
 	Status          string        `json:"status" gorm:"default:'active';index;check:status IN ('active', 'settled', 'archived', 'overdue')"`
 	DueDate         time.Time     `json:"due_date" gorm:"not null"`
 	NextPaymentDate time.Time     `json:"next_payment_date" gorm:"not null"`
-	InstallmentPlan string        `json:"installment_plan" gorm:"default:'monthly';check:installment_plan IN ('weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')"`
+	InstallmentPlan string        `json:"installment_plan" gorm:"default:'monthly';check:installment_plan IN ('onetime', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly')"`
 	NumberOfPayments *int         `json:"number_of_payments" gorm:"default:null"`
 	Description     *string       `json:"description"`
 	Notes           *string       `json:"notes"`
@@ -52,7 +57,7 @@ type CreateDebtListRequest struct {
 	TotalAmount       string    `json:"total_amount" binding:"required"`
 	Currency          string    `json:"currency"`
 	DueDate           *time.Time `json:"due_date"`
-	InstallmentPlan   string    `json:"installment_plan" binding:"required,oneof=weekly biweekly monthly quarterly yearly"`
+	InstallmentPlan   string    `json:"installment_plan" binding:"omitempty,oneof=onetime weekly biweekly monthly quarterly yearly"`
 	NumberOfPayments  *int      `json:"number_of_payments"`
 	Description       *string   `json:"description"`
 	Notes             *string   `json:"notes"`

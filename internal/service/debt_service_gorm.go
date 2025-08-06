@@ -46,6 +46,17 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 		currency = "Php"
 	}
 
+	// Validation: If number_of_payments is provided, installment_plan is required
+	if req.NumberOfPayments != nil && *req.NumberOfPayments > 0 && req.InstallmentPlan == "" {
+		return nil, errors.New("installment_plan is required when number_of_payments is provided")
+	}
+
+	// Validation: If due_date is provided but installment_plan is not, default to 1-time payment
+	installmentPlan := req.InstallmentPlan
+	if req.DueDate != nil && installmentPlan == "" {
+		installmentPlan = "onetime" // Default to onetime for 1-time payment calculation
+	}
+
 	// Determine due date and installment amount based on input
 	var dueDate time.Time
 	var installmentAmount decimal.Decimal
@@ -56,17 +67,17 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 	if req.NumberOfPayments != nil && *req.NumberOfPayments > 0 {
 		// Use number of payments to calculate due date and installment amount
 		numberOfPayments = req.NumberOfPayments
-		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, *req.NumberOfPayments, req.InstallmentPlan)
+		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, *req.NumberOfPayments, installmentPlan)
 		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, *req.NumberOfPayments)
 	} else if req.DueDate != nil {
 		// Use provided due date (existing behavior)
 		dueDate = *req.DueDate
-		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, req.InstallmentPlan, createdAt, dueDate)
+		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, installmentPlan, createdAt, dueDate)
 	} else {
 		// Default to 1 payment if neither is provided
 		defaultPayments := 1
 		numberOfPayments = &defaultPayments
-		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, defaultPayments, req.InstallmentPlan)
+		dueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(createdAt, defaultPayments, installmentPlan)
 		installmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, defaultPayments)
 	}
 
@@ -89,10 +100,10 @@ func (s *DebtServiceGORM) CreateDebtList(userID uuid.UUID, req *models.CreateDeb
 		Status:            "active",
 		DueDate:           dueDate,
 		NextPaymentDate:   s.paymentScheduleService.CalculateNextPaymentDate(&models.DebtList{
-			InstallmentPlan: req.InstallmentPlan,
+			InstallmentPlan: installmentPlan,
 			CreatedAt:       createdAt,
 		}, nil),
-		InstallmentPlan:   req.InstallmentPlan,
+		InstallmentPlan:   installmentPlan,
 		NumberOfPayments:  numberOfPayments,
 		Description:       req.Description,
 		Notes:             req.Notes,

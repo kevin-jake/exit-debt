@@ -28,6 +28,9 @@ func (s *PaymentScheduleService) CalculateNextPaymentDate(debtList *models.DebtL
 	}
 
 	switch debtList.InstallmentPlan {
+	case "onetime":
+		// For 1-time payments, return the due date itself
+		return debtList.DueDate
 	case "weekly":
 		return startDate.AddDate(0, 0, 7)
 	case "biweekly":
@@ -39,7 +42,7 @@ func (s *PaymentScheduleService) CalculateNextPaymentDate(debtList *models.DebtL
 	case "yearly":
 		return startDate.AddDate(1, 0, 0)
 	default:
-		return startDate.AddDate(0, 1, 0) // Default to monthly
+		return debtList.DueDate // Default to onetime
 	}
 }
 
@@ -179,6 +182,9 @@ func (s *PaymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt 
 
 	var dueDate time.Time
 	switch installmentPlan {
+	case "onetime":
+		// For 1-time payments, due date is the creation date (single payment)
+		dueDate = createdAt
 	case "weekly":
 		// Each payment is 7 days apart
 		dueDate = createdAt.AddDate(0, 0, (numberOfPayments-1)*7)
@@ -195,8 +201,8 @@ func (s *PaymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt 
 		// Each payment is 1 year apart
 		dueDate = createdAt.AddDate(numberOfPayments-1, 0, 0)
 	default:
-		// Default to monthly
-		dueDate = createdAt.AddDate(0, numberOfPayments-1, 0)
+		// Default to onetime (single payment)
+		dueDate = createdAt
 	}
 
 	return dueDate
@@ -225,6 +231,9 @@ func (s *PaymentScheduleService) CalculateNumberOfPayments(installmentPlan strin
 	days := int(duration.Hours() / 24)
 	
 	switch installmentPlan {
+	case "onetime":
+		// For 1-time payments, always return 1
+		return 1
 	case "weekly":
 		// Calculate weeks between creation and due date
 		weeks := days / 7
