@@ -1,0 +1,458 @@
+{
+  "info": {
+    "_postman_id": "debt-tracker-api-complete",
+    "name": "Debt Tracker API - Complete",
+    "description": "Complete API collection for the Debt Tracker application with all endpoints and dynamic URL parameters",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "auth_token",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "contact_id",
+      "value": ""
+    },
+    {
+      "key": "debt_list_id",
+      "value": ""
+    },
+    {
+      "key": "debt_item_id",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"phone\": \"+1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check (Protected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Smith\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+1234567890\",\n  \"facebook_id\": \"john.smith.123\",\n  \"notes\": \"Friend from college\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contacts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "contacts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Contacts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/contacts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "contacts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Contact",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/contacts/{{contact_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "contacts", "{{contact_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated John Smith\",\n  \"email\": \"john.updated@example.com\",\n  \"phone\": \"+1987654321\",\n  \"notes\": \"Updated notes\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contacts/{{contact_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "contacts", "{{contact_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/contacts/{{contact_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "contacts", "{{contact_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Debt Lists",
+      "item": [
+        {
+          "name": "Create Debt List",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Personal Loans\",\n  \"description\": \"Money lent to friends and family\",\n  \"currency\": \"Php\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Debt Lists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Debt List",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists/{{debt_list_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists", "{{debt_list_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Debt List",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Personal Loans\",\n  \"description\": \"Updated description\",\n  \"currency\": \"EUR\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists/{{debt_list_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists", "{{debt_list_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Debt List",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists/{{debt_list_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists", "{{debt_list_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment Schedule",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists/{{debt_list_id}}/payment-schedule",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "debt-lists",
+                "{{debt_list_id}}",
+                "payment-schedule"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Debt Items",
+      "item": [
+        {
+          "name": "Create Debt Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"debt_list_id\": \"{{debt_list_id}}\",\n  \"debtor_name\": \"John Smith\",\n  \"debtor_email\": \"john@example.com\",\n  \"debtor_phone\": \"+1234567890\",\n  \"debtor_facebook_id\": \"john.smith.123\",\n  \"amount\": \"150.50\",\n  \"currency\": \"Php\",\n  \"description\": \"Lunch money\",\n  \"due_date\": \"2024-02-15T00:00:00Z\",\n  \"debt_type\": \"owed_to_me\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/debt-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Specific Debt Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-items/{{debt_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items", "{{debt_item_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Debt Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"debtor_name\": \"Updated John Smith\",\n  \"amount\": \"200.00\",\n  \"status\": \"paid\",\n  \"due_date\": \"2024-03-01T00:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/debt-items/{{debt_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items", "{{debt_item_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Debt Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-items/{{debt_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items", "{{debt_item_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Debt List Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-lists/{{debt_list_id}}/items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-lists", "{{debt_list_id}}", "items"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Special Endpoints",
+      "item": [
+        {
+          "name": "Get Overdue Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-items/overdue",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items", "overdue"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Due Soon Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/debt-items/due-soon?days=7",
+              "host": ["{{base_url}}"],
+              "path": ["api", "debt-items", "due-soon"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "7"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Upcoming Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/upcoming-payments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "upcoming-payments"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
