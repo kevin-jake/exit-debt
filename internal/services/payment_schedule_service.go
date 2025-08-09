@@ -1,22 +1,23 @@
-package service
+package services
 
 import (
 	"time"
 
-	"exit-debt/internal/models"
-
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
+
+	"exit-debt/internal/domain/entities"
+	"exit-debt/internal/domain/interfaces"
 )
 
-type PaymentScheduleService struct{}
+// paymentScheduleService implements the PaymentScheduleService interface
+type paymentScheduleService struct{}
 
-func NewPaymentScheduleService() *PaymentScheduleService {
-	return &PaymentScheduleService{}
+// NewPaymentScheduleService creates a new payment schedule service
+func NewPaymentScheduleService() interfaces.PaymentScheduleService {
+	return &paymentScheduleService{}
 }
 
-// CalculateNextPaymentDate calculates when the next payment is due
-func (s *PaymentScheduleService) CalculateNextPaymentDate(debtList *models.DebtList, lastPaymentDate *time.Time) time.Time {
+func (s *paymentScheduleService) CalculateNextPaymentDate(debtList *entities.DebtList, lastPaymentDate *time.Time) time.Time {
 	var startDate time.Time
 	
 	if lastPaymentDate != nil {
@@ -46,38 +47,20 @@ func (s *PaymentScheduleService) CalculateNextPaymentDate(debtList *models.DebtL
 	}
 }
 
-// CalculateRemainingPayments calculates how many payments are left
-func (s *PaymentScheduleService) CalculateRemainingPayments(debtList *models.DebtList, totalPaid decimal.Decimal) int {
-	remainingAmount := debtList.TotalAmount.Sub(totalPaid)
-	if remainingAmount.LessThanOrEqual(decimal.Zero) {
-		return 0
-	}
-
-	// Calculate how many full installments are needed
-	installmentsNeeded := remainingAmount.Div(debtList.InstallmentAmount).Ceil()
-	return int(installmentsNeeded.IntPart())
-}
-
-// CalculatePaymentSchedule generates a complete payment schedule with payment tracking
-func (s *PaymentScheduleService) CalculatePaymentSchedule(debtList *models.DebtList, db *gorm.DB) []PaymentScheduleItem {
-	var schedule []PaymentScheduleItem
+func (s *paymentScheduleService) CalculatePaymentSchedule(debtList *entities.DebtList, payments []entities.DebtItem) []entities.PaymentScheduleItem {
+	var schedule []entities.PaymentScheduleItem
 	currentDate := debtList.CreatedAt
 	paymentNumber := 1
 
 	// Calculate total number of payments based on time period
 	totalPayments := s.CalculateNumberOfPayments(debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
 	
-	// Get all payments made for this debt list
-	var payments []models.DebtItem
-	if err := db.Where("debt_list_id = ? AND status = ?", debtList.ID, "completed").Order("payment_date ASC").Find(&payments).Error; err != nil {
-		// If error, continue with empty payments
-		payments = []models.DebtItem{}
-	}
-
 	// Calculate total payments made
 	totalPaymentsMade := decimal.Zero
 	for _, payment := range payments {
-		totalPaymentsMade = totalPaymentsMade.Add(payment.Amount)
+		if payment.Status == "completed" {
+			totalPaymentsMade = totalPaymentsMade.Add(payment.Amount)
+		}
 	}
 
 	// Calculate remaining debt after payments
@@ -117,11 +100,11 @@ func (s *PaymentScheduleService) CalculatePaymentSchedule(debtList *models.DebtL
 		// Calculate next payment date
 		nextDate := s.CalculateNextPaymentDate(debtList, &currentDate)
 
-		scheduleItem := PaymentScheduleItem{
-			PaymentNumber:  paymentNumber,
-			DueDate:        nextDate,
-			Amount:         amountNeeded,
-			Status:         status,
+		scheduleItem := entities.PaymentScheduleItem{
+			PaymentNumber: paymentNumber,
+			DueDate:       nextDate,
+			Amount:        amountNeeded,
+			Status:        status,
 		}
 
 		schedule = append(schedule, scheduleItem)
@@ -135,47 +118,7 @@ func (s *PaymentScheduleService) CalculatePaymentSchedule(debtList *models.DebtL
 	return schedule
 }
 
-// PaymentScheduleItem represents a scheduled payment
-type PaymentScheduleItem struct {
-	PaymentNumber int             `json:"payment_number"`
-	DueDate       time.Time       `json:"due_date"`
-	Amount        decimal.Decimal `json:"amount"`
-	Status        string          `json:"status"` // pending, paid, overdue, missed
-}
-
-// GetUpcomingPayments returns payments due in the next X days
-func (s *PaymentScheduleService) GetUpcomingPayments(debtList *models.DebtList, days int, db *gorm.DB) []PaymentScheduleItem {
-	schedule := s.CalculatePaymentSchedule(debtList, db)
-	var upcoming []PaymentScheduleItem
-	
-	cutoffDate := time.Now().AddDate(0, 0, days)
-	
-	for _, item := range schedule {
-		if item.DueDate.After(time.Now()) && item.DueDate.Before(cutoffDate) {
-			upcoming = append(upcoming, item)
-		}
-	}
-	
-	return upcoming
-}
-
-// GetOverduePayments returns payments that are overdue
-func (s *PaymentScheduleService) GetOverduePayments(debtList *models.DebtList, db *gorm.DB) []PaymentScheduleItem {
-	schedule := s.CalculatePaymentSchedule(debtList, db)
-	var overdue []PaymentScheduleItem
-	
-	for _, item := range schedule {
-		if item.DueDate.Before(time.Now()) {
-			item.Status = "overdue"
-			overdue = append(overdue, item)
-		}
-	}
-	
-	return overdue
-}
-
-// CalculateDueDateFromNumberOfPayments calculates the due date based on number of payments and installment plan
-func (s *PaymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt time.Time, numberOfPayments int, installmentPlan string) time.Time {
+func (s *paymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt time.Time, numberOfPayments int, installmentPlan string) time.Time {
 	if numberOfPayments <= 0 {
 		numberOfPayments = 1
 	}
@@ -208,16 +151,14 @@ func (s *PaymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt 
 	return dueDate
 }
 
-// CalculateInstallmentAmountFromNumberOfPayments calculates the installment amount based on total amount and number of payments
-func (s *PaymentScheduleService) CalculateInstallmentAmountFromNumberOfPayments(totalAmount decimal.Decimal, numberOfPayments int) decimal.Decimal {
+func (s *paymentScheduleService) CalculateInstallmentAmountFromNumberOfPayments(totalAmount decimal.Decimal, numberOfPayments int) decimal.Decimal {
 	if numberOfPayments <= 0 {
 		numberOfPayments = 1
 	}
 	return totalAmount.Div(decimal.NewFromInt(int64(numberOfPayments)))
 }
 
-// CalculateInstallmentAmount calculates the installment amount based on total amount, installment plan, and time period
-func (s *PaymentScheduleService) CalculateInstallmentAmount(totalAmount decimal.Decimal, installmentPlan string, createdAt time.Time, dueDate time.Time) decimal.Decimal {
+func (s *paymentScheduleService) CalculateInstallmentAmount(totalAmount decimal.Decimal, installmentPlan string, createdAt time.Time, dueDate time.Time) decimal.Decimal {
 	numberOfPayments := s.CalculateNumberOfPayments(installmentPlan, createdAt, dueDate)
 	if numberOfPayments <= 0 {
 		numberOfPayments = 1 // At least 1 payment
@@ -225,8 +166,9 @@ func (s *PaymentScheduleService) CalculateInstallmentAmount(totalAmount decimal.
 	return totalAmount.Div(decimal.NewFromInt(int64(numberOfPayments)))
 }
 
-// CalculateNumberOfPayments returns the number of payments based on installment plan and time period
-func (s *PaymentScheduleService) CalculateNumberOfPayments(installmentPlan string, createdAt time.Time, dueDate time.Time) int {
+// Helper methods
+
+func (s *paymentScheduleService) CalculateNumberOfPayments(installmentPlan string, createdAt time.Time, dueDate time.Time) int {
 	duration := dueDate.Sub(createdAt)
 	days := int(duration.Hours() / 24)
 	
@@ -279,8 +221,7 @@ func (s *PaymentScheduleService) CalculateNumberOfPayments(installmentPlan strin
 	}
 }
 
-// Helper functions for calculating time periods
-func (s *PaymentScheduleService) calculateMonthsBetween(start, end time.Time) int {
+func (s *paymentScheduleService) calculateMonthsBetween(start, end time.Time) int {
 	years := end.Year() - start.Year()
 	months := end.Month() - start.Month()
 	
@@ -296,7 +237,7 @@ func (s *PaymentScheduleService) calculateMonthsBetween(start, end time.Time) in
 	return totalMonths + 1 // Add 1 to include both start and end months
 }
 
-func (s *PaymentScheduleService) calculateQuartersBetween(start, end time.Time) int {
+func (s *paymentScheduleService) calculateQuartersBetween(start, end time.Time) int {
 	months := s.calculateMonthsBetween(start, end)
 	quarters := months / 3
 	if months%3 > 0 {
@@ -305,7 +246,7 @@ func (s *PaymentScheduleService) calculateQuartersBetween(start, end time.Time) 
 	return quarters
 }
 
-func (s *PaymentScheduleService) calculateYearsBetween(start, end time.Time) int {
+func (s *paymentScheduleService) calculateYearsBetween(start, end time.Time) int {
 	years := end.Year() - start.Year()
 	if end.Month() < start.Month() || (end.Month() == start.Month() && end.Day() < start.Day()) {
 		years--
@@ -314,4 +255,10 @@ func (s *PaymentScheduleService) calculateYearsBetween(start, end time.Time) int
 		years = 0
 	}
 	return years + 1 // Add 1 to include both start and end years
-} 
+}
+
+
+
+
+
+

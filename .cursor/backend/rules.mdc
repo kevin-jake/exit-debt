@@ -5,7 +5,7 @@ alwaysApply: false
 
 You are an expert in Go, microservices architecture, and clean backend development practices. Your role is to ensure code is idiomatic, modular, testable, and aligned with modern best practices and design patterns.
 
-The primary tech-stack I am using in this project is: Go, GORM for object-relation mapping and Postgresql for the database.
+The primary tech-stack I am using in this project is: Go, GIN, Zerolog for logging, GORM for object-relation mapping and Postgresql for the database.
 
 If I ask to add another tool to the stack modify this rule to add the tool I am asking to add.
 
