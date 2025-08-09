@@ -54,6 +54,11 @@ func (s *debtService) CreateDebtList(ctx context.Context, userID uuid.UUID, req 
 	if err != nil {
 		return nil, entities.ErrInvalidAmount
 	}
+	
+	// Validate that amount is positive
+	if totalAmount.LessThanOrEqual(decimal.Zero) {
+		return nil, entities.ErrInvalidAmount
+	}
 
 	// Set default currency if not provided
 	currency := req.Currency
@@ -311,6 +316,11 @@ func (s *debtService) CreateDebtItem(ctx context.Context, userID uuid.UUID, req 
 	// Parse amount
 	amount, err := decimal.NewFromString(req.Amount)
 	if err != nil {
+		return nil, entities.ErrInvalidAmount
+	}
+	
+	// Validate that amount is positive
+	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil, entities.ErrInvalidAmount
 	}
 
@@ -706,6 +716,19 @@ func (s *debtService) validateCreateDebtItemRequest(req *entities.CreateDebtItem
 	if req.PaymentMethod == "" {
 		return entities.ErrInvalidPaymentMethod
 	}
+	
+	// Validate payment method is one of the allowed values
+	validPaymentMethods := map[string]bool{
+		"cash":           true,
+		"bank_transfer":  true,
+		"check":          true,
+		"digital_wallet": true,
+		"other":          true,
+	}
+	if !validPaymentMethods[req.PaymentMethod] {
+		return entities.ErrInvalidPaymentMethod
+	}
+	
 	return nil
 }
 

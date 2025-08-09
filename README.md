@@ -1,4 +1,4 @@
-# Go Debt Tracker
+# Exit-Debt - a Go Debt Tracker Application
 
 A comprehensive debt tracking application built with Go, PostgreSQL, and Gin framework. Track your debts, money lent to others, and send notifications via email, SMS, or Facebook Messenger.
 

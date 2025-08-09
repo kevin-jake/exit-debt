@@ -1,0 +1,711 @@
+{
+  "user_contact_management_test_scenarios": {
+    "user_registration": [
+      {
+        "scenario_number": 1,
+        "test_description": "Register new user with valid data",
+        "test_data": {
+          "email": "john.doe@example.com",
+          "password": "securepassword123",
+          "first_name": "John",
+          "last_name": "Doe",
+          "phone": "+1234567890"
+        },
+        "expected_result": {
+          "status": "created",
+          "user_id": "generated_uuid",
+          "email": "john.doe@example.com",
+          "full_name": "John Doe",
+          "password_hashed": true,
+          "contacts_created_for_existing_references": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 2,
+        "test_description": "Register user with existing email",
+        "test_data": {
+          "email": "existing@example.com",
+          "password": "password123",
+          "first_name": "Jane",
+          "last_name": "Smith"
+        },
+        "expected_result": {
+          "error": "ErrUserAlreadyExists",
+          "status_code": 400,
+          "message": "user already exists"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 3,
+        "test_description": "Register user with invalid email format",
+        "test_data": {
+          "email": "invalid-email",
+          "password": "password123",
+          "first_name": "John",
+          "last_name": "Doe"
+        },
+        "expected_result": {
+          "error": "ErrInvalidEmail",
+          "status_code": 400,
+          "message": "invalid email address"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 4,
+        "test_description": "Register user with password too short",
+        "test_data": {
+          "email": "user@example.com",
+          "password": "123",
+          "first_name": "John",
+          "last_name": "Doe"
+        },
+        "expected_result": {
+          "error": "ErrInvalidPassword",
+          "status_code": 400,
+          "message": "invalid password"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 5,
+        "test_description": "Register user with missing required fields",
+        "test_data": {
+          "email": "user@example.com",
+          "password": "password123",
+          "first_name": "",
+          "last_name": "Doe"
+        },
+        "expected_result": {
+          "error": "ErrInvalidFirstName",
+          "status_code": 400,
+          "message": "first name is required"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 6,
+        "test_description": "Register user where email already exists as contact",
+        "test_data": {
+          "email": "contact.user@example.com",
+          "password": "password123",
+          "first_name": "Contact",
+          "last_name": "User",
+          "existing_contacts_with_this_email": 2
+        },
+        "expected_result": {
+          "status": "created",
+          "user_id": "generated_uuid",
+          "reciprocal_contacts_created": true,
+          "contacts_updated_with_user_reference": true,
+          "is_user_flag_set": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "user_authentication": [
+      {
+        "scenario_number": 7,
+        "test_description": "Login with valid credentials",
+        "test_data": {
+          "email": "john.doe@example.com",
+          "password": "securepassword123"
+        },
+        "expected_result": {
+          "status": "success",
+          "jwt_token": "generated_token",
+          "user_data": "returned",
+          "token_expires": "according_to_jwt_expiry"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 8,
+        "test_description": "Login with invalid password",
+        "test_data": {
+          "email": "john.doe@example.com",
+          "password": "wrongpassword"
+        },
+        "expected_result": {
+          "error": "ErrInvalidCredentials",
+          "status_code": 401,
+          "message": "invalid credentials"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 9,
+        "test_description": "Login with non-existent email",
+        "test_data": {
+          "email": "nonexistent@example.com",
+          "password": "password123"
+        },
+        "expected_result": {
+          "error": "ErrInvalidCredentials",
+          "status_code": 401,
+          "message": "invalid credentials"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 10,
+        "test_description": "Validate expired JWT token",
+        "test_data": {
+          "token": "expired_jwt_token",
+          "current_time": "after_token_expiry"
+        },
+        "expected_result": {
+          "error": "ErrTokenExpired",
+          "status_code": 401,
+          "message": "token expired"
+        },
+        "output_result": null,
+        "is_valid": false
+      }
+    ],
+    "contact_creation": [
+      {
+        "scenario_number": 11,
+        "test_description": "Create contact with valid data (non-user)",
+        "test_data": {
+          "user_id": "authenticated_user_uuid",
+          "name": "Alice Johnson",
+          "email": "alice@example.com",
+          "phone": "+1987654321",
+          "notes": "Friend from college"
+        },
+        "expected_result": {
+          "status": "created",
+          "contact_id": "generated_uuid",
+          "name": "Alice Johnson",
+          "is_user": false,
+          "user_id_ref": null,
+          "user_contact_relation_created": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 12,
+        "test_description": "Create contact with email of existing user",
+        "test_data": {
+          "user_id": "authenticated_user_uuid",
+          "name": "Bob Smith",
+          "email": "bob.smith@example.com",
+          "existing_user_with_email": true
+        },
+        "expected_result": {
+          "status": "created",
+          "contact_id": "generated_uuid",
+          "is_user": true,
+          "user_id_ref": "bob_user_uuid",
+          "reciprocal_contact_created": true,
+          "reciprocal_relation_created": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 13,
+        "test_description": "Create contact with duplicate email for same user",
+        "test_data": {
+          "user_id": "authenticated_user_uuid",
+          "name": "Duplicate Contact",
+          "email": "existing.contact@example.com",
+          "existing_contact_with_same_email": true
+        },
+        "expected_result": {
+          "error": "ErrContactAlreadyExists",
+          "status_code": 400,
+          "message": "contact already exists"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 14,
+        "test_description": "Create contact without required name",
+        "test_data": {
+          "user_id": "authenticated_user_uuid",
+          "name": "",
+          "email": "test@example.com"
+        },
+        "expected_result": {
+          "error": "ErrInvalidContactName",
+          "status_code": 400,
+          "message": "contact name is required"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 15,
+        "test_description": "Create contact with existing global contact (different user)",
+        "test_data": {
+          "user_id": "user_a_uuid",
+          "name": "Shared Contact",
+          "email": "shared@example.com",
+          "existing_global_contact": true,
+          "existing_contact_created_by": "user_b_uuid"
+        },
+        "expected_result": {
+          "status": "created",
+          "contact_reused": true,
+          "new_user_contact_relation_created": true,
+          "contact_id": "existing_contact_uuid"
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "reciprocal_contact_creation": [
+      {
+        "scenario_number": 16,
+        "test_description": "Create reciprocal contact when adding user as contact",
+        "test_data": {
+          "user_a_id": "user_a_uuid",
+          "user_a_email": "user.a@example.com",
+          "user_a_name": "User A",
+          "user_b_id": "user_b_uuid",
+          "user_b_email": "user.b@example.com",
+          "user_b_name": "User B",
+          "action": "user_a_adds_user_b_as_contact"
+        },
+        "expected_result": {
+          "contact_created_for_user_a": true,
+          "reciprocal_contact_created_for_user_b": true,
+          "both_users_can_see_each_other": true,
+          "both_contacts_marked_as_users": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 17,
+        "test_description": "Reciprocal contact already exists",
+        "test_data": {
+          "user_a_id": "user_a_uuid",
+          "user_b_id": "user_b_uuid",
+          "user_b_email": "user.b@example.com",
+          "existing_reciprocal_contact": true,
+          "action": "user_a_adds_user_b_as_contact"
+        },
+        "expected_result": {
+          "contact_created_for_user_a": true,
+          "reciprocal_contact_creation_skipped": true,
+          "no_duplicate_reciprocal_contact": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 18,
+        "test_description": "New user registration triggers reciprocal contacts",
+        "test_data": {
+          "new_user_email": "new.user@example.com",
+          "existing_contacts_with_this_email": [
+            {
+              "contact_owner": "user_x_uuid",
+              "contact_name": "New User"
+            },
+            {
+              "contact_owner": "user_y_uuid",
+              "contact_name": "Future User"
+            }
+          ]
+        },
+        "expected_result": {
+          "user_registered": true,
+          "reciprocal_contacts_created": 2,
+          "new_user_can_see_existing_contacts": true,
+          "existing_users_can_see_new_user": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "user_contact_relationships": [
+      {
+        "scenario_number": 19,
+        "test_description": "Get user contacts with mixed types",
+        "test_data": {
+          "user_id": "user_with_mixed_contacts",
+          "existing_contacts": [
+            {
+              "type": "regular_contact",
+              "is_user": false,
+              "name": "Regular Contact"
+            },
+            {
+              "type": "user_contact",
+              "is_user": true,
+              "name": "User Contact",
+              "user_id_ref": "other_user_uuid"
+            }
+          ]
+        },
+        "expected_result": {
+          "status": "success",
+          "contacts_returned": 2,
+          "contact_types_preserved": true,
+          "user_flags_correct": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 20,
+        "test_description": "Update contact to user when email matches existing user",
+        "test_data": {
+          "contact_id": "existing_contact_uuid",
+          "user_id": "contact_owner_uuid",
+          "updates": {
+            "email": "existing.user@example.com"
+          },
+          "email_belongs_to_user": true
+        },
+        "expected_result": {
+          "status": "updated",
+          "is_user_flag_updated": true,
+          "user_id_ref_set": true,
+          "contact_linked_to_user": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 21,
+        "test_description": "Delete contact relationship (not contact itself)",
+        "test_data": {
+          "contact_id": "shared_contact_uuid",
+          "user_id": "user_to_remove_relation",
+          "contact_has_other_relationships": true
+        },
+        "expected_result": {
+          "status": "deleted",
+          "user_contact_relation_deleted": true,
+          "contact_still_exists": true,
+          "other_relations_preserved": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "debt_type_conditions": [
+      {
+        "scenario_number": 22,
+        "test_description": "Create debt 'i_owe' - user owes money to contact",
+        "test_data": {
+          "user_id": "debtor_user_uuid",
+          "contact_id": "creditor_contact_uuid",
+          "debt_type": "i_owe",
+          "amount": "500.00",
+          "description": "Borrowed money for car repair"
+        },
+        "expected_result": {
+          "status": "created",
+          "debt_perspective": "user_is_debtor",
+          "contact_perspective": "contact_is_creditor",
+          "query_results_for_user": "shows_as_debt_owed",
+          "query_results_for_contact_user": "shows_as_money_owed_to_them"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 23,
+        "test_description": "Create debt 'owed_to_me' - contact owes money to user",
+        "test_data": {
+          "user_id": "creditor_user_uuid",
+          "contact_id": "debtor_contact_uuid",
+          "debt_type": "owed_to_me",
+          "amount": "300.00",
+          "description": "Lent money for emergency"
+        },
+        "expected_result": {
+          "status": "created",
+          "debt_perspective": "user_is_creditor",
+          "contact_perspective": "contact_is_debtor",
+          "query_results_for_user": "shows_as_money_owed_to_them",
+          "query_results_for_contact_user": "shows_as_debt_they_owe"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 24,
+        "test_description": "Query debts with perspective filtering - user as debtor",
+        "test_data": {
+          "user_id": "user_with_mixed_debts",
+          "existing_debts": [
+            {
+              "debt_type": "i_owe",
+              "amount": "200.00",
+              "contact_name": "Contact A"
+            },
+            {
+              "debt_type": "owed_to_me",
+              "amount": "150.00",
+              "contact_name": "Contact B"
+            }
+          ],
+          "query_filter": "debts_i_owe"
+        },
+        "expected_result": {
+          "status": "success",
+          "filtered_results": 1,
+          "debt_type_returned": "i_owe",
+          "amount_returned": "200.00",
+          "user_role": "debtor"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 25,
+        "test_description": "Query debts with perspective filtering - user as creditor",
+        "test_data": {
+          "user_id": "user_with_mixed_debts",
+          "existing_debts": [
+            {
+              "debt_type": "i_owe",
+              "amount": "200.00",
+              "contact_name": "Contact A"
+            },
+            {
+              "debt_type": "owed_to_me",
+              "amount": "150.00",
+              "contact_name": "Contact B"
+            }
+          ],
+          "query_filter": "debts_owed_to_me"
+        },
+        "expected_result": {
+          "status": "success",
+          "filtered_results": 1,
+          "debt_type_returned": "owed_to_me",
+          "amount_returned": "150.00",
+          "user_role": "creditor"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 26,
+        "test_description": "Reciprocal debt perspective - same debt from both users' view",
+        "test_data": {
+          "user_a_id": "user_a_uuid",
+          "user_b_id": "user_b_uuid",
+          "debt_created_by": "user_a",
+          "debt_type": "owed_to_me",
+          "amount": "400.00",
+          "contact_relationship": "reciprocal"
+        },
+        "expected_result": {
+          "user_a_perspective": {
+            "debt_type": "owed_to_me",
+            "role": "creditor",
+            "contact_name": "User B"
+          },
+          "user_b_perspective": {
+            "debt_type": "i_owe",
+            "role": "debtor",
+            "contact_name": "User A"
+          },
+          "same_debt_different_perspectives": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "authorization_and_security": [
+      {
+        "scenario_number": 27,
+        "test_description": "Access contact belonging to different user",
+        "test_data": {
+          "contact_id": "contact_owned_by_user_a",
+          "requesting_user_id": "user_b_uuid",
+          "no_relationship_exists": true
+        },
+        "expected_result": {
+          "error": "Contact access verification failed",
+          "status_code": 404,
+          "message": "contact not found or access denied"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 28,
+        "test_description": "Update contact without proper authorization",
+        "test_data": {
+          "contact_id": "protected_contact_uuid",
+          "requesting_user_id": "unauthorized_user_uuid",
+          "updates": {
+            "name": "Malicious Update"
+          }
+        },
+        "expected_result": {
+          "error": "Contact access verification failed",
+          "status_code": 404,
+          "message": "contact not found or access denied"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 29,
+        "test_description": "Create debt with contact not belonging to user",
+        "test_data": {
+          "user_id": "unauthorized_user_uuid",
+          "contact_id": "contact_owned_by_other_user",
+          "debt_type": "i_owe",
+          "amount": "100.00"
+        },
+        "expected_result": {
+          "error": "Contact verification failed",
+          "status_code": 404,
+          "message": "contact not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 30,
+        "test_description": "JWT token manipulation attempt",
+        "test_data": {
+          "token": "manipulated_jwt_token",
+          "modified_user_id": "different_user_uuid",
+          "signature_invalid": true
+        },
+        "expected_result": {
+          "error": "ErrInvalidToken",
+          "status_code": 401,
+          "message": "invalid token"
+        },
+        "output_result": null,
+        "is_valid": false
+      }
+    ],
+    "edge_cases_and_complex_scenarios": [
+      {
+        "scenario_number": 31,
+        "test_description": "User registers with email that has many existing contacts",
+        "test_data": {
+          "new_user_email": "popular@example.com",
+          "existing_contacts_count": 50,
+          "contacts_across_multiple_users": true
+        },
+        "expected_result": {
+          "status": "created",
+          "reciprocal_contacts_created": 50,
+          "performance_acceptable": true,
+          "no_duplicate_relations": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 32,
+        "test_description": "Contact email update triggers user reference change",
+        "test_data": {
+          "contact_id": "existing_contact_uuid",
+          "original_email": "old@example.com",
+          "new_email": "existing.user@example.com",
+          "new_email_belongs_to_user": true
+        },
+        "expected_result": {
+          "status": "updated",
+          "is_user_flag_changed": true,
+          "user_id_ref_updated": true,
+          "old_user_reference_cleared": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 33,
+        "test_description": "Delete user with existing contacts and debts",
+        "test_data": {
+          "user_id": "user_to_delete",
+          "existing_contacts": 5,
+          "existing_debts": 3,
+          "reciprocal_contacts": 2
+        },
+        "expected_result": {
+          "cascade_deletion_strategy": "defined",
+          "contacts_handling": "specified",
+          "debts_handling": "specified",
+          "reciprocal_contacts_handling": "specified"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 34,
+        "test_description": "Concurrent contact creation with same email",
+        "test_data": {
+          "user_a_id": "user_a_uuid",
+          "user_b_id": "user_b_uuid",
+          "contact_email": "concurrent@example.com",
+          "simultaneous_creation": true
+        },
+        "expected_result": {
+          "race_condition_handled": true,
+          "single_contact_created": true,
+          "both_relations_created": true,
+          "no_duplicate_contacts": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 35,
+        "test_description": "Complex debt network with multiple users",
+        "test_data": {
+          "users": ["user_a", "user_b", "user_c"],
+          "debt_network": [
+            {
+              "from": "user_a",
+              "to": "user_b",
+              "type": "i_owe",
+              "amount": "100.00"
+            },
+            {
+              "from": "user_b",
+              "to": "user_c",
+              "type": "i_owe",
+              "amount": "75.00"
+            },
+            {
+              "from": "user_c",
+              "to": "user_a",
+              "type": "i_owe",
+              "amount": "50.00"
+            }
+          ]
+        },
+        "expected_result": {
+          "all_debts_created": true,
+          "perspectives_correct": true,
+          "user_a_owes": "100.00_to_user_b",
+          "user_a_owed": "50.00_from_user_c",
+          "network_consistency": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ]
+  }
+}

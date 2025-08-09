@@ -1,0 +1,576 @@
+{
+  "debt_management_test_scenarios": {
+    "debt_list_creation": [
+      {
+        "scenario_number": 1,
+        "test_description": "Create debt list with valid data - basic one-time payment",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "1000.00",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z",
+          "installment_plan": "onetime",
+          "description": "Loan from friend",
+          "notes": "Emergency loan"
+        },
+        "expected_result": {
+          "status": "created",
+          "debt_list_id": "generated_uuid",
+          "total_amount": "1000.00",
+          "installment_amount": "1000.00",
+          "total_remaining_debt": "1000.00",
+          "status_field": "active",
+          "number_of_payments": 1
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 2,
+        "test_description": "Create debt list with monthly installments using number of payments",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "owed_to_me",
+          "total_amount": "2400.00",
+          "currency": "USD",
+          "installment_plan": "monthly",
+          "number_of_payments": 12,
+          "description": "Personal loan to friend"
+        },
+        "expected_result": {
+          "status": "created",
+          "installment_amount": "200.00",
+          "calculated_due_date": "approximately_12_months_from_creation",
+          "next_payment_date": "approximately_1_month_from_creation"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 3,
+        "test_description": "Create debt list with invalid debt type",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "invalid_type",
+          "total_amount": "500.00",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z"
+        },
+        "expected_result": {
+          "error": "ErrInvalidDebtType",
+          "status_code": 400,
+          "message": "invalid debt type"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 4,
+        "test_description": "Create debt list with invalid amount (negative)",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "-100.00",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z"
+        },
+        "expected_result": {
+          "error": "ErrInvalidAmount",
+          "status_code": 400,
+          "message": "invalid amount"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 5,
+        "test_description": "Create debt list with due date in the past",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "500.00",
+          "currency": "USD",
+          "due_date": "2020-01-01T00:00:00Z"
+        },
+        "expected_result": {
+          "error": "ErrInvalidDueDate",
+          "status_code": 400,
+          "message": "due date must be in the future"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 6,
+        "test_description": "Create debt list with non-existent contact",
+        "test_data": {
+          "contact_id": "00000000-0000-0000-0000-000000000000",
+          "debt_type": "i_owe",
+          "total_amount": "500.00",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z"
+        },
+        "expected_result": {
+          "error": "ErrContactNotFound",
+          "status_code": 404,
+          "message": "contact not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 7,
+        "test_description": "Create debt list with weekly installments",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "owed_to_me",
+          "total_amount": "1000.00",
+          "currency": "PHP",
+          "installment_plan": "weekly",
+          "number_of_payments": 10
+        },
+        "expected_result": {
+          "status": "created",
+          "installment_amount": "100.00",
+          "currency": "PHP",
+          "calculated_due_date": "approximately_10_weeks_from_creation"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 8,
+        "test_description": "Create debt list without due_date or number_of_payments",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "500.00",
+          "currency": "USD"
+        },
+        "expected_result": {
+          "error": "ValidationError",
+          "status_code": 400,
+          "message": "either due_date or number_of_payments must be provided"
+        },
+        "output_result": null,
+        "is_valid": false
+      }
+    ],
+    "debt_item_creation": [
+      {
+        "scenario_number": 9,
+        "test_description": "Create payment record with valid data",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "amount": "200.00",
+          "currency": "USD",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "bank_transfer",
+          "description": "First installment payment"
+        },
+        "expected_result": {
+          "status": "created",
+          "debt_item_id": "generated_uuid",
+          "status_field": "completed",
+          "amount": "200.00",
+          "debt_list_updated": true,
+          "remaining_debt_recalculated": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 10,
+        "test_description": "Create payment with invalid amount (zero)",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "amount": "0.00",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "cash"
+        },
+        "expected_result": {
+          "error": "ErrInvalidAmount",
+          "status_code": 400,
+          "message": "invalid amount"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 11,
+        "test_description": "Create payment with invalid payment method",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "amount": "100.00",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "invalid_method"
+        },
+        "expected_result": {
+          "error": "ErrInvalidPaymentMethod",
+          "status_code": 400,
+          "message": "invalid payment method"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 12,
+        "test_description": "Create payment for non-existent debt list",
+        "test_data": {
+          "debt_list_id": "00000000-0000-0000-0000-000000000000",
+          "amount": "100.00",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "cash"
+        },
+        "expected_result": {
+          "error": "ErrDebtListNotFound",
+          "status_code": 404,
+          "message": "debt list not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 13,
+        "test_description": "Create payment that fully settles debt",
+        "test_data": {
+          "debt_list_id": "debt_list_with_100_remaining",
+          "amount": "100.00",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "digital_wallet"
+        },
+        "expected_result": {
+          "status": "created",
+          "debt_list_status_updated_to": "settled",
+          "remaining_debt": "0.00",
+          "total_paid": "equals_total_amount"
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "debt_list_updates": [
+      {
+        "scenario_number": 14,
+        "test_description": "Update debt list total amount",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "updates": {
+            "total_amount": "1500.00"
+          }
+        },
+        "expected_result": {
+          "status": "updated",
+          "total_amount": "1500.00",
+          "installment_amount_recalculated": true,
+          "remaining_debt_recalculated": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 15,
+        "test_description": "Update debt list installment plan",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "updates": {
+            "installment_plan": "biweekly"
+          }
+        },
+        "expected_result": {
+          "status": "updated",
+          "installment_plan": "biweekly",
+          "due_date_recalculated": true,
+          "installment_amount_recalculated": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 16,
+        "test_description": "Update debt list with invalid status",
+        "test_data": {
+          "debt_list_id": "existing_debt_list_uuid",
+          "updates": {
+            "status": "invalid_status"
+          }
+        },
+        "expected_result": {
+          "error": "ValidationError",
+          "status_code": 400,
+          "message": "invalid status value"
+        },
+        "output_result": null,
+        "is_valid": false
+      }
+    ],
+    "analytics_and_reporting": [
+      {
+        "scenario_number": 17,
+        "test_description": "Get overdue debt lists for user",
+        "test_data": {
+          "user_id": "user_with_overdue_debts",
+          "current_date": "2024-02-01T00:00:00Z"
+        },
+        "expected_result": {
+          "status": "success",
+          "overdue_count": "positive_integer",
+          "debt_lists": "array_of_overdue_debts",
+          "all_next_payment_dates": "before_current_date"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 18,
+        "test_description": "Get due soon items within 7 days",
+        "test_data": {
+          "user_id": "user_with_upcoming_payments",
+          "days": 7,
+          "current_date": "2024-01-01T00:00:00Z"
+        },
+        "expected_result": {
+          "status": "success",
+          "due_soon_count": "positive_integer",
+          "debt_lists": "array_of_due_soon_debts",
+          "all_due_dates": "within_7_days_from_current"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 19,
+        "test_description": "Get payment schedule for debt list",
+        "test_data": {
+          "debt_list_id": "debt_list_with_monthly_payments",
+          "user_id": "authorized_user",
+          "debt_list_details": {
+            "total_amount": "1200.00",
+            "installment_plan": "monthly",
+            "number_of_payments": 6
+          }
+        },
+        "expected_result": {
+          "status": "success",
+          "schedule_items": 6,
+          "each_item_has": ["payment_number", "due_date", "amount", "status"],
+          "payment_amounts": "200.00_each",
+          "statuses": ["paid", "pending", "overdue"]
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 20,
+        "test_description": "Get payment summary for debt list",
+        "test_data": {
+          "debt_list_id": "debt_list_with_partial_payments",
+          "user_id": "authorized_user",
+          "debt_list_details": {
+            "total_amount": "1000.00",
+            "payments_made": ["200.00", "150.00"]
+          }
+        },
+        "expected_result": {
+          "status": "success",
+          "total_amount": "1000.00",
+          "total_paid": "350.00",
+          "remaining_debt": "650.00",
+          "percentage_paid": "35.00",
+          "number_of_payments": 2
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 21,
+        "test_description": "Get upcoming payments for user within 30 days",
+        "test_data": {
+          "user_id": "user_with_multiple_debts",
+          "days": 30,
+          "current_date": "2024-01-01T00:00:00Z"
+        },
+        "expected_result": {
+          "status": "success",
+          "upcoming_payments": "array_of_upcoming_payments",
+          "each_payment_has": [
+            "debt_list_id",
+            "contact_name",
+            "debt_type",
+            "next_payment_date",
+            "amount",
+            "currency"
+          ],
+          "all_payment_dates": "within_30_days_from_current"
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ],
+    "validation_and_authorization": [
+      {
+        "scenario_number": 22,
+        "test_description": "Access debt list belonging to different user",
+        "test_data": {
+          "debt_list_id": "debt_list_owned_by_user_a",
+          "requesting_user_id": "user_b"
+        },
+        "expected_result": {
+          "error": "ErrDebtListNotFound",
+          "status_code": 404,
+          "message": "debt list not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 23,
+        "test_description": "Create debt item for debt list owned by different user",
+        "test_data": {
+          "debt_list_id": "debt_list_owned_by_user_a",
+          "requesting_user_id": "user_b",
+          "amount": "100.00",
+          "payment_method": "cash",
+          "payment_date": "2024-01-15T10:30:00Z"
+        },
+        "expected_result": {
+          "error": "ErrDebtListNotFound",
+          "status_code": 404,
+          "message": "debt list not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      },
+      {
+        "scenario_number": 24,
+        "test_description": "Update debt item belonging to different user",
+        "test_data": {
+          "debt_item_id": "debt_item_owned_by_user_a",
+          "requesting_user_id": "user_b",
+          "updates": {
+            "amount": "150.00"
+          }
+        },
+        "expected_result": {
+          "error": "ErrDebtItemNotFound",
+          "status_code": 404,
+          "message": "debt item not found"
+        },
+        "output_result": null,
+        "is_valid": false
+      }
+    ],
+    "edge_cases_and_boundary_conditions": [
+      {
+        "scenario_number": 25,
+        "test_description": "Create debt with very large amount",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "999999999.99",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z"
+        },
+        "expected_result": {
+          "status": "created",
+          "total_amount": "999999999.99",
+          "installment_amount": "999999999.99"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 26,
+        "test_description": "Create debt with very small amount",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "0.01",
+          "currency": "USD",
+          "due_date": "2024-12-31T00:00:00Z"
+        },
+        "expected_result": {
+          "status": "created",
+          "total_amount": "0.01",
+          "installment_amount": "0.01"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 27,
+        "test_description": "Create payment larger than remaining debt",
+        "test_data": {
+          "debt_list_id": "debt_list_with_100_remaining",
+          "amount": "150.00",
+          "payment_date": "2024-01-15T10:30:00Z",
+          "payment_method": "cash"
+        },
+        "expected_result": {
+          "status": "created",
+          "payment_amount": "150.00",
+          "debt_status": "settled",
+          "remaining_debt": "0.00",
+          "overpayment_recorded": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 28,
+        "test_description": "Calculate installments with odd division",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "i_owe",
+          "total_amount": "100.00",
+          "installment_plan": "monthly",
+          "number_of_payments": 3
+        },
+        "expected_result": {
+          "status": "created",
+          "installment_amount": "33.33",
+          "total_amount": "100.00",
+          "calculation_precision": "decimal_places_handled"
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 29,
+        "test_description": "Delete debt list with existing payments",
+        "test_data": {
+          "debt_list_id": "debt_list_with_payments",
+          "user_id": "authorized_user",
+          "existing_payments_count": 3
+        },
+        "expected_result": {
+          "status": "deleted",
+          "cascade_delete": true,
+          "payments_also_deleted": true
+        },
+        "output_result": null,
+        "is_valid": true
+      },
+      {
+        "scenario_number": 30,
+        "test_description": "Create debt with quarterly installments and fractional periods",
+        "test_data": {
+          "contact_id": "550e8400-e29b-41d4-a716-446655440000",
+          "debt_type": "owed_to_me",
+          "total_amount": "1000.00",
+          "installment_plan": "quarterly",
+          "number_of_payments": 5
+        },
+        "expected_result": {
+          "status": "created",
+          "installment_amount": "200.00",
+          "calculated_due_date": "approximately_15_months_from_creation",
+          "payment_schedule_valid": true
+        },
+        "output_result": null,
+        "is_valid": true
+      }
+    ]
+  }
+}
