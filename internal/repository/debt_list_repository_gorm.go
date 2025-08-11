@@ -85,6 +85,28 @@ func (r *debtListRepositoryGORM) GetUserDebtLists(ctx context.Context, userID uu
 	return debtLists, nil
 }
 
+func (r *debtListRepositoryGORM) GetDebtListsWhereUserIsContact(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error) {
+	// Find debt lists where the current user is referenced as a contact
+	var gormDebtLists []models.DebtList
+	if err := r.db.WithContext(ctx).
+		Preload("Contact").
+		Preload("User").
+		Preload("Payments").
+		Joins("JOIN contacts ON debt_lists.contact_id = contacts.id").
+		Where("contacts.user_id_ref = ?", userID).
+		Order("created_at DESC").
+		Find(&gormDebtLists).Error; err != nil {
+		return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
+	}
+
+	debtLists := make([]entities.DebtListResponse, len(gormDebtLists))
+	for i, gormDebtList := range gormDebtLists {
+		debtLists[i] = *r.gormToResponseEntity(&gormDebtList)
+	}
+
+	return debtLists, nil
+}
+
 func (r *debtListRepositoryGORM) Update(ctx context.Context, debtList *entities.DebtList) error {
 	gormDebtList := r.entityToGORM(debtList)
 	if err := r.db.WithContext(ctx).Save(gormDebtList).Error; err != nil {

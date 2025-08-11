@@ -21,4 +21,5 @@ type ContactRepository interface {
 	DeleteUserContactRelation(ctx context.Context, userID, contactID uuid.UUID) error
 	ExistsByEmailForUser(ctx context.Context, userID uuid.UUID, email string) (bool, error)
 	GetContactsWithEmail(ctx context.Context, email string) ([]entities.Contact, error)
+	GetUserContactRelationsByContactID(ctx context.Context, contactID uuid.UUID) ([]entities.UserContact, error)
 }

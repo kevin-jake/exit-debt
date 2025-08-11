@@ -171,12 +171,31 @@ func (s *debtService) GetDebtList(ctx context.Context, id uuid.UUID, userID uuid
 }
 
 func (s *debtService) GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error) {
-	debtLists, err := s.debtListRepo.GetUserDebtLists(ctx, userID)
+	// Get debt lists owned by the user
+	ownedDebtLists, err := s.debtListRepo.GetUserDebtLists(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user debt lists: %w", err)
 	}
 
-	return debtLists, nil
+	// Get debt lists where the user is referenced as a contact (other users owe them or they owe other users)
+	contactDebtLists, err := s.debtListRepo.GetDebtListsWhereUserIsContact(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
+	}
+
+	// Flip the debt type for debt lists where the user is the contact
+	for i := range contactDebtLists {
+		if contactDebtLists[i].DebtType == "owed_to_me" {
+			contactDebtLists[i].DebtType = "i_owe"
+		} else if contactDebtLists[i].DebtType == "i_owe" {
+			contactDebtLists[i].DebtType = "owed_to_me"
+		}
+	}
+
+	// Combine both lists
+	allDebtLists := append(ownedDebtLists, contactDebtLists...)
+
+	return allDebtLists, nil
 }
 
 func (s *debtService) UpdateDebtList(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateDebtListRequest) (*entities.DebtList, error) {

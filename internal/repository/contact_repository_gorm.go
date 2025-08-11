@@ -149,6 +149,20 @@ func (r *contactRepositoryGORM) GetContactsWithEmail(ctx context.Context, email 
 	return contacts, nil
 }
 
+func (r *contactRepositoryGORM) GetUserContactRelationsByContactID(ctx context.Context, contactID uuid.UUID) ([]entities.UserContact, error) {
+	var gormUserContacts []models.UserContact
+	if err := r.db.WithContext(ctx).Where("contact_id = ?", contactID).Find(&gormUserContacts).Error; err != nil {
+		return nil, fmt.Errorf("failed to get user contact relations by contact ID: %w", err)
+	}
+
+	userContacts := make([]entities.UserContact, len(gormUserContacts))
+	for i, gormUserContact := range gormUserContacts {
+		userContacts[i] = *r.userContactGormToEntity(&gormUserContact)
+	}
+
+	return userContacts, nil
+}
+
 // entityToGORM converts a domain entity to GORM model
 func (r *contactRepositoryGORM) entityToGORM(contact *entities.Contact) *models.Contact {
 	return &models.Contact{

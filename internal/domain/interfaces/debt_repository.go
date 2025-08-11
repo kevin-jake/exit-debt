@@ -16,6 +16,7 @@ type DebtListRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.DebtList, error)
 	GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*entities.DebtListResponse, error)
 	GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error)
+	GetDebtListsWhereUserIsContact(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error)
 	Update(ctx context.Context, debtList *entities.DebtList) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetOverdueForUser(ctx context.Context, userID uuid.UUID) ([]entities.DebtList, error)
