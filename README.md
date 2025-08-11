@@ -144,6 +144,58 @@ The application uses the following main tables:
 go test ./...
 ```
 
+**Specific Test Categories**
+You can run specific types of tests:
+
+```bash
+# Unit tests only (services and handlers)
+./run_tests.sh unit
+
+# Integration tests (complete user-contact-debt workflows)
+./run_tests.sh integration
+
+# API endpoint tests (authentication and authorization)
+./run_tests.sh api
+
+# Database relationship tests
+./run_tests.sh database
+
+# Performance benchmarks
+./run_tests.sh performance
+
+# Race condition detection
+./run_tests.sh race
+
+# Coverage report only
+./run_tests.sh coverage
+```
+
+**Manual Test Execution**
+You can also run tests manually using Go commands:
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with coverage
+go test -v -coverprofile=coverage.out ./...
+
+# Generate HTML coverage report
+go tool cover -html=coverage.out -o coverage.html
+
+# Run specific test package
+go test ./tests/unit
+go test ./tests/integration
+go test ./tests/api
+go test ./tests/database
+
+# Run with race detection
+go test -race ./...
+
+# Run benchmarks
+go test -bench=. -benchmem ./...
+```
+
 ### Database Schema
 
 The application uses GORM's auto-migration feature to automatically create and update the database schema based on the model definitions. No manual migrations are required.

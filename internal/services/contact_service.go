@@ -228,14 +228,35 @@ func (s *contactService) CreateContactsForNewUser(ctx context.Context, userID uu
 		return nil // No existing contacts found with this email
 	}
 
-	// For each existing contact, create a user-contact relationship for the new user
-	for range existingContacts {
-		// Find the user who owns this contact through the user-contact relationship
-		// This is a complex operation that would typically be done in the repository layer
-		// For now, we'll create a reciprocal contact
+	// For each existing contact, update it to reference the new user and create user-contact relationships
+	for _, contact := range existingContacts {
+		// Update the existing contact to reference the new user
+		contact.IsUser = true
+		contact.UserIDRef = &userID
+		contact.UpdatedAt = time.Now()
+		
+		if err := s.contactRepo.Update(ctx, &contact); err != nil {
+			// Log the error but continue with other contacts
+			continue
+		}
+
+		// Create user-contact relationship for the new user
+		userContact := &entities.UserContact{
+			ID:        uuid.New(),
+			UserID:    userID,
+			ContactID: contact.ID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if err := s.contactRepo.CreateUserContactRelation(ctx, userContact); err != nil {
+			// Log the error but continue with other contacts
+			continue
+		}
+
+		// Create reciprocal contact for the contact owner
 		if err := s.CreateReciprocalContact(ctx, userEmail, userID); err != nil {
 			// Log the error but continue with other contacts
-			// TODO: Add proper logging here with context
 			continue
 		}
 	}

@@ -26,7 +26,7 @@ func (req CreateDebtListRequest) Validate() error {
 }
 
 type DebtList struct {
-	ID              uuid.UUID     `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ID              uuid.UUID     `json:"id" gorm:"type:uuid;primary_key"`
 	UserID          uuid.UUID     `json:"user_id" gorm:"type:uuid;not null;index"`
 	ContactID       uuid.UUID     `json:"contact_id" gorm:"type:uuid;not null;index"`
 	DebtType        string        `json:"debt_type" gorm:"not null;index;check:debt_type IN ('owed_to_me', 'i_owe')"`

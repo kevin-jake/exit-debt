@@ -7,7 +7,7 @@ import (
 )
 
 type Contact struct {
-	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 	Name        string    `json:"name" gorm:"not null;index"`
 	Email       *string   `json:"email" gorm:"index"`
 	Phone       *string   `json:"phone"`
@@ -26,7 +26,7 @@ type Contact struct {
 
 // UserContact represents the many-to-many relationship between users and contacts
 type UserContact struct {
-	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
 	ContactID uuid.UUID `json:"contact_id" gorm:"type:uuid;not null;index"`
 	CreatedAt time.Time `json:"created_at"`

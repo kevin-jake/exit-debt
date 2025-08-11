@@ -7,7 +7,7 @@ import (
 )
 
 type UserSettings struct {
-	ID                  uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	ID                  uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 	UserID              uuid.UUID `json:"user_id" gorm:"type:uuid;not null;uniqueIndex"`
 	NotificationEmail   bool      `json:"notification_email" gorm:"default:true"`
 	NotificationSMS     bool      `json:"notification_sms" gorm:"default:false"`
