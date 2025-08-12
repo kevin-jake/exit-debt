@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 
 	"exit-debt/internal/domain/entities"
 	"exit-debt/internal/domain/interfaces"
@@ -109,7 +110,13 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 	if req.Email != nil && isUser {
 		if err := s.CreateReciprocalContact(ctx, *req.Email, userID); err != nil {
 			// Log the error but don't fail contact creation
-			// TODO: Add proper logging here with context
+			logger := zerolog.Ctx(ctx)
+			logger.Warn().
+				Err(err).
+				Str("user_id", userID.String()).
+				Str("contact_email", *req.Email).
+				Str("contact_id", contact.ID.String()).
+				Msg("Failed to create reciprocal contact")
 		}
 	}
 

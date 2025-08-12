@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 
 	"exit-debt/internal/domain/entities"
@@ -87,7 +88,12 @@ func (s *authService) Register(ctx context.Context, req *entities.CreateUserRequ
 	// Create contacts for the new user based on existing contacts that have their email
 	if err := s.contactService.CreateContactsForNewUser(ctx, user.ID, user.Email); err != nil {
 		// Log the error but don't fail registration
-		// TODO: Add proper logging here with context
+		logger := zerolog.Ctx(ctx)
+		logger.Warn().
+			Err(err).
+			Str("user_id", user.ID.String()).
+			Str("user_email", user.Email).
+			Msg("Failed to create contacts for new user during registration")
 	}
 
 	return &entities.RegisterResponse{
