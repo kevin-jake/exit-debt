@@ -129,11 +129,17 @@ The application uses the following main tables:
 │   └── server/          # Main application entry point
 ├── internal/
 │   ├── config/          # Configuration management
-│   ├── handler/         # HTTP handlers
+│   ├── handlers/        # HTTP handlers
 │   ├── middleware/      # HTTP middleware
 │   ├── models/          # Data models
 │   ├── database/        # Database connection and GORM setup
-│   └── service/         # Business logic
+│   ├── services/        # Business logic
+│   ├── repository/      # Data access layer
+│   ├── domain/          # Domain entities and interfaces
+│   └── mocks/           # Mock implementations for testing
+├── tests/
+│   ├── unit/            # Unit tests for services and business logic
+│   └── integration/     # Integration tests for complete workflows
 ├── pkg/                 # Public packages
 └── scripts/             # Utility scripts
 ```
@@ -148,17 +154,14 @@ go test ./...
 You can run specific types of tests:
 
 ```bash
-# Unit tests only (services and handlers)
+# Unit tests only (services and business logic)
 ./run_tests.sh unit
 
 # Integration tests (complete user-contact-debt workflows)
 ./run_tests.sh integration
 
-# API endpoint tests (authentication and authorization)
-./run_tests.sh api
-
-# Database relationship tests
-./run_tests.sh database
+# All tests
+./run_tests.sh all
 
 # Performance benchmarks
 ./run_tests.sh performance
@@ -186,8 +189,6 @@ go tool cover -html=coverage.out -o coverage.html
 # Run specific test package
 go test ./tests/unit
 go test ./tests/integration
-go test ./tests/api
-go test ./tests/database
 
 # Run with race detection
 go test -race ./...

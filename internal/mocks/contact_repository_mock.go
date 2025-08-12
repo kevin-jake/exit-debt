@@ -83,3 +83,11 @@ func (m *MockContactRepository) DeleteUserContactRelation(ctx context.Context, u
 	args := m.Called(ctx, userID, contactID)
 	return args.Error(0)
 }
+
+func (m *MockContactRepository) GetUserContactRelationsByContactID(ctx context.Context, contactID uuid.UUID) ([]entities.UserContact, error) {
+	args := m.Called(ctx, contactID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.UserContact), args.Error(1)
+}

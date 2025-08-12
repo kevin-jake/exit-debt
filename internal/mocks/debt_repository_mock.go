@@ -91,6 +91,14 @@ func (m *MockDebtListRepository) UpdateNextPaymentDate(ctx context.Context, debt
 	return args.Error(0)
 }
 
+func (m *MockDebtListRepository) GetDebtListsWhereUserIsContact(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.DebtListResponse), args.Error(1)
+}
+
 // MockDebtItemRepository is a mock implementation of DebtItemRepository
 type MockDebtItemRepository struct {
 	mock.Mock

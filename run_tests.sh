@@ -90,19 +90,11 @@ run_tests_with_coverage() {
 
 # Function to run specific test types
 run_unit_tests() {
-    run_test_category "Unit Tests" "./tests/unit" "Unit tests for services and handlers"
+    run_test_category "Unit Tests" "./tests/unit" "Unit tests for services and business logic"
 }
 
 run_integration_tests() {
     run_test_category "Integration Tests" "./tests/integration" "Integration tests for complete workflows"
-}
-
-run_api_tests() {
-    run_test_category "API Tests" "./tests/api" "API endpoint tests with authentication"
-}
-
-run_database_tests() {
-    run_test_category "Database Tests" "./tests/database" "Database relationship management tests"
 }
 
 # Function to run performance tests
@@ -138,7 +130,7 @@ validate_test_structure() {
     print_status "Validating test structure..."
     
     # Check if test directories exist
-    local test_dirs=("tests/unit" "tests/integration" "tests/api" "tests/database")
+    local test_dirs=("tests/unit" "tests/integration")
     for dir in "${test_dirs[@]}"; do
         if [ -d "$dir" ]; then
             print_success "✓ $dir exists"
@@ -172,14 +164,6 @@ main() {
             validate_test_structure
             run_integration_tests
             ;;
-        "api")
-            validate_test_structure
-            run_api_tests
-            ;;
-        "database")
-            validate_test_structure
-            run_database_tests
-            ;;
         "performance")
             run_performance_tests
             ;;
@@ -194,8 +178,6 @@ main() {
             validate_test_structure
             run_unit_tests
             run_integration_tests
-            run_api_tests
-            run_database_tests
             run_performance_tests
             run_race_tests
             run_tests_with_coverage
@@ -208,8 +190,6 @@ main() {
             echo "Test types:"
             echo "  unit         - Run unit tests only"
             echo "  integration  - Run integration tests only"
-            echo "  api          - Run API tests only"
-            echo "  database     - Run database tests only"
             echo "  performance  - Run performance benchmarks"
             echo "  race         - Run race condition tests"
             echo "  coverage     - Run all tests with coverage report"

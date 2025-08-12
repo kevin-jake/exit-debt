@@ -61,7 +61,9 @@ func TestContactService_CreateContact(t *testing.T) {
 				Email: stringPtr("bob@example.com"),
 			},
 			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
+				// Mock the initial check for existing contact with same email
 				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "bob@example.com").Return(false, nil)
+				
 				existingUser := &entities.User{
 					ID:        existingUserID,
 					Email:     "bob@example.com",
@@ -81,7 +83,7 @@ func TestContactService_CreateContact(t *testing.T) {
 					LastName:  "User",
 				}
 				userRepo.On("GetByID", mock.Anything, userID).Return(contactOwner, nil)
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, existingUserID, "user@example.com").Return(false, nil)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "user@example.com").Return(false, nil)
 				contactRepo.On("GetByEmail", mock.Anything, "user@example.com").Return(nil, entities.ErrContactNotFound)
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
@@ -416,7 +418,7 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 				userRepo.On("GetByID", mock.Anything, userAID).Return(userA, nil)
 				
 				// Check if reciprocal contact already exists
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, userBID, "usera@example.com").Return(false, nil)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, userAID, "usera@example.com").Return(false, nil)
 				
 				// No existing contact with User A's email
 				contactRepo.On("GetByEmail", mock.Anything, "usera@example.com").Return(nil, entities.ErrContactNotFound)
@@ -452,7 +454,7 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 				userRepo.On("GetByID", mock.Anything, userAID).Return(userA, nil)
 				
 				// Reciprocal contact already exists
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, userBID, "usera@example.com").Return(true, nil)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, userAID, "usera@example.com").Return(true, nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,

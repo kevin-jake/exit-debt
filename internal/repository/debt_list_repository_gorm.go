@@ -94,14 +94,32 @@ func (r *debtListRepositoryGORM) GetDebtListsWhereUserIsContact(ctx context.Cont
 		Preload("Payments").
 		Joins("JOIN contacts ON debt_lists.contact_id = contacts.id").
 		Where("contacts.user_id_ref = ?", userID).
-		Order("created_at DESC").
+		Order("debt_lists.created_at DESC").
 		Find(&gormDebtLists).Error; err != nil {
 		return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
 	}
 
 	debtLists := make([]entities.DebtListResponse, len(gormDebtLists))
 	for i, gormDebtList := range gormDebtLists {
-		debtLists[i] = *r.gormToResponseEntity(&gormDebtList)
+		// When a user views a debt list where they are the contact,
+		// the Contact field should represent the debt list owner (User), not themselves
+		debtListResponse := *r.gormToResponseEntity(&gormDebtList)
+		
+		// Replace the Contact information with the User (debt list owner) information
+		debtListResponse.Contact = entities.Contact{
+			ID:         gormDebtList.User.ID,
+			Name:       gormDebtList.User.FirstName + " " + gormDebtList.User.LastName,
+			Email:      &gormDebtList.User.Email,
+			Phone:      gormDebtList.User.Phone,
+			FacebookID: nil, // User doesn't have FacebookID
+			Notes:      nil, // User doesn't have Notes
+			IsUser:     true,
+			UserIDRef:  &gormDebtList.User.ID,
+			CreatedAt:  gormDebtList.User.CreatedAt,
+			UpdatedAt:  gormDebtList.User.UpdatedAt,
+		}
+		
+		debtLists[i] = debtListResponse
 	}
 
 	return debtLists, nil
