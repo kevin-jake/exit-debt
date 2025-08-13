@@ -70,6 +70,7 @@ UI and Styling
 - Import Shadcn components from `$lib/components/ui`.
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`.
 - Use Svelte's built-in transition and animation features.
+- Implement media responsiveness for the UI. The application is meant to be viewed in multiple devices.
 
 Shadcn Color Conventions
 

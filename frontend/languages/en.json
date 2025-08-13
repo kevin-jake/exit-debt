@@ -1,0 +1,53 @@
+{
+	"app": {
+		"name": "Exit-Debt",
+		"tagline": "Take control of your debts"
+	},
+	"nav": {
+		"dashboard": "Dashboard",
+		"debts": "Debts",
+		"profile": "Profile",
+		"settings": "Settings",
+		"logout": "Logout"
+	},
+	"auth": {
+		"login": "Login",
+		"register": "Register",
+		"email": "Email",
+		"password": "Password",
+		"confirmPassword": "Confirm Password",
+		"forgotPassword": "Forgot Password?",
+		"loginButton": "Sign In",
+		"registerButton": "Create Account",
+		"alreadyHaveAccount": "Already have an account?",
+		"dontHaveAccount": "Don't have an account?"
+	},
+	"debt": {
+		"title": "Debt",
+		"amount": "Amount",
+		"description": "Description",
+		"dueDate": "Due Date",
+		"category": "Category",
+		"status": "Status",
+		"creditor": "Creditor",
+		"debtor": "Debtor",
+		"addDebt": "Add Debt",
+		"editDebt": "Edit Debt",
+		"deleteDebt": "Delete Debt",
+		"markPaid": "Mark as Paid",
+		"totalOwed": "Total Owed",
+		"totalOwing": "Total Owing"
+	},
+	"common": {
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"edit": "Edit",
+		"add": "Add",
+		"search": "Search",
+		"filter": "Filter",
+		"loading": "Loading...",
+		"error": "Error",
+		"success": "Success"
+	}
+}
