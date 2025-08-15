@@ -66,13 +66,9 @@ Svelte Runes
 UI and Styling
 
 - Use Tailwind CSS for utility-first styling approach.
-- Leverage Shadcn components for pre-built, customizable UI elements.
-- Import Shadcn components from `$lib/components/ui`.
 - Organize Tailwind classes using the `cn()` utility from `$lib/utils`.
 - Use Svelte's built-in transition and animation features.
 - Implement media responsiveness for the UI. The application is meant to be viewed in multiple devices.
-
-Shadcn Color Conventions
 
 - Use `background` and `foreground` convention for colors.
 - Define CSS variables without color space function:
@@ -201,24 +197,6 @@ Forms and Actions
 - Utilize SvelteKit's form actions for server-side form handling.
 - Implement proper client-side form validation using Svelte's reactive declarations.
 - Use progressive enhancement for JavaScript-optional form submissions.
-
-Internationalization (i18n) with Paraglide.js
-
-- Use Paraglide.js for internationalization: https://inlang.com/m/gerre34r/library-inlang-paraglideJs
-- Install Paraglide.js: `npm install @inlang/paraglide-js`
-- Set up language files in the `languages` directory.
-- Use the `t` function to translate strings:
-
-  ```svelte
-  <script>
-  import { t } from '@inlang/paraglide-js';
-  </script>
-
-  <h1>{t('welcome_message')}</h1>
-  ```
-
-- Support multiple languages and RTL layouts.
-- Ensure text scaling and font adjustments for accessibility.
 
 Accessibility
 

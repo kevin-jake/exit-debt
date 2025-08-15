@@ -1,13 +1,28 @@
-import { clsx, type ClassValue } from "clsx";
+import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type WithoutChild<T> = T extends { child?: any } ? Omit<T, "child"> : T;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type WithoutChildren<T> = T extends { children?: any } ? Omit<T, "children"> : T;
-export type WithoutChildrenOrChild<T> = WithoutChildren<WithoutChild<T>>;
-export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };
+export function getTheme(): "dark" | "light" {
+  if (typeof window === "undefined") return "dark";
+  return (localStorage.getItem("theme") as "dark" | "light") || "dark";
+}
+
+export function setTheme(theme: "dark" | "light") {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem("theme", theme);
+
+  if (theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+}
+
+export function toggleTheme() {
+  const currentTheme = getTheme();
+  setTheme(currentTheme === "dark" ? "light" : "dark");
+}

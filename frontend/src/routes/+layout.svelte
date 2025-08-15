@@ -1,17 +1,33 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
-	import { themeStore } from '$lib/stores/theme.svelte.js';
-	import AppLayout from '$lib/components/layout/app-layout.svelte';
-	
+	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import Navigation from '$lib/components/Navigation.svelte';
+	import { getTheme, setTheme } from '$lib/utils';
+
 	let { children } = $props();
+
+	// Check if current page should show navigation
+	const showNavigation = $derived(!$page.url.pathname.startsWith('/login') && !$page.url.pathname.startsWith('/register'));
+
+	onMount(() => {
+		// Initialize theme
+		const theme = getTheme();
+		setTheme(theme);
+	});
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-	<meta name="theme-color" content={themeStore.isDark ? '#0f172a' : '#ffffff'} />
-</svelte:head>
-
-<AppLayout>
-	{@render children?.()}
-</AppLayout>
+{#if showNavigation}
+	<div class="min-h-screen bg-background">
+		<Navigation />
+		<main class="ml-64">
+			<div class="p-6">
+				{@render children()}
+			</div>
+		</main>
+	</div>
+{:else}
+	<div class="min-h-screen bg-background">
+		{@render children()}
+	</div>
+{/if}
