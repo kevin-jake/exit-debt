@@ -34,3 +34,5 @@ tmp
 
 # Frontend mockups and design assets
 frontend/mockups/
+frontend/.svelte-kit/
+frontend/node_modules/
