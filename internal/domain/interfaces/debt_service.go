@@ -26,6 +26,11 @@ type DebtService interface {
 	UpdateDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateDebtItemRequest) (*entities.DebtItem, error)
 	DeleteDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
 
+	// Payment verification operations
+	VerifyDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.VerifyDebtItemRequest) (*entities.DebtItem, error)
+	GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error)
+	RejectDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, notes *string) (*entities.DebtItem, error)
+
 	// Debt analytics and reporting
 	GetOverdueItems(ctx context.Context, userID uuid.UUID) ([]entities.DebtList, error)
 	GetDueSoonItems(ctx context.Context, userID uuid.UUID, days int) ([]entities.DebtList, error)

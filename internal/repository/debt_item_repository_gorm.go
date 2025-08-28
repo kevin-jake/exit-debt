@@ -140,35 +140,105 @@ func (r *debtItemRepositoryGORM) BelongsToUserDebtList(ctx context.Context, debt
 	return count > 0, nil
 }
 
+// GetPendingVerifications gets all pending debt items that need verification
+func (r *debtItemRepositoryGORM) GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error) {
+	var gormDebtItems []models.DebtItem
+	if err := r.db.WithContext(ctx).
+		Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
+		Where("debt_lists.user_id = ? AND debt_items.status = ?", userID, "pending").
+		Order("debt_items.created_at DESC").
+		Find(&gormDebtItems).Error; err != nil {
+		return nil, fmt.Errorf("failed to get pending verifications: %w", err)
+	}
+
+	debtItems := make([]entities.DebtItem, len(gormDebtItems))
+	for i, gormDebtItem := range gormDebtItems {
+		debtItems[i] = *r.gormToEntity(&gormDebtItem)
+	}
+
+	return debtItems, nil
+}
+
+// UpdatePaymentStatus updates the payment status and verification details
+func (r *debtItemRepositoryGORM) UpdatePaymentStatus(ctx context.Context, debtItemID uuid.UUID, status string, verifiedBy uuid.UUID, notes *string) error {
+	updates := map[string]interface{}{
+		"status":             status,
+		"verified_by":        verifiedBy,
+		"verified_at":        time.Now(),
+		"verification_notes": notes,
+		"updated_at":         time.Now(),
+	}
+
+	result := r.db.WithContext(ctx).Model(&models.DebtItem{}).
+		Where("id = ?", debtItemID).
+		Updates(updates)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update payment status: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrDebtItemNotFound
+	}
+	return nil
+}
+
+// UpdateReceiptPhoto updates the receipt photo URL for a debt item
+func (r *debtItemRepositoryGORM) UpdateReceiptPhoto(ctx context.Context, debtItemID uuid.UUID, photoURL *string) error {
+	updates := map[string]interface{}{
+		"receipt_photo_url": photoURL,
+		"updated_at":        time.Now(),
+	}
+
+	result := r.db.WithContext(ctx).Model(&models.DebtItem{}).
+		Where("id = ?", debtItemID).
+		Updates(updates)
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update receipt photo: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return entities.ErrDebtItemNotFound
+	}
+	return nil
+}
+
 // entityToGORM converts a domain entity to GORM model
 func (r *debtItemRepositoryGORM) entityToGORM(debtItem *entities.DebtItem) *models.DebtItem {
 	return &models.DebtItem{
-		ID:            debtItem.ID,
-		DebtListID:    debtItem.DebtListID,
-		Amount:        debtItem.Amount,
-		Currency:      debtItem.Currency,
-		PaymentDate:   debtItem.PaymentDate,
-		PaymentMethod: debtItem.PaymentMethod,
-		Description:   debtItem.Description,
-		Status:        debtItem.Status,
-		CreatedAt:     debtItem.CreatedAt,
-		UpdatedAt:     debtItem.UpdatedAt,
+		ID:                debtItem.ID,
+		DebtListID:        debtItem.DebtListID,
+		Amount:            debtItem.Amount,
+		Currency:          debtItem.Currency,
+		PaymentDate:       debtItem.PaymentDate,
+		PaymentMethod:     debtItem.PaymentMethod,
+		Description:       debtItem.Description,
+		Status:            debtItem.Status,
+		ReceiptPhotoURL:   debtItem.ReceiptPhotoURL,
+		VerifiedBy:        debtItem.VerifiedBy,
+		VerifiedAt:        debtItem.VerifiedAt,
+		VerificationNotes: debtItem.VerificationNotes,
+		CreatedAt:         debtItem.CreatedAt,
+		UpdatedAt:         debtItem.UpdatedAt,
 	}
 }
 
 // gormToEntity converts a GORM model to domain entity
 func (r *debtItemRepositoryGORM) gormToEntity(gormDebtItem *models.DebtItem) *entities.DebtItem {
 	return &entities.DebtItem{
-		ID:            gormDebtItem.ID,
-		DebtListID:    gormDebtItem.DebtListID,
-		Amount:        gormDebtItem.Amount,
-		Currency:      gormDebtItem.Currency,
-		PaymentDate:   gormDebtItem.PaymentDate,
-		PaymentMethod: gormDebtItem.PaymentMethod,
-		Description:   gormDebtItem.Description,
-		Status:        gormDebtItem.Status,
-		CreatedAt:     gormDebtItem.CreatedAt,
-		UpdatedAt:     gormDebtItem.UpdatedAt,
+		ID:                gormDebtItem.ID,
+		DebtListID:        gormDebtItem.DebtListID,
+		Amount:            gormDebtItem.Amount,
+		Currency:          gormDebtItem.Currency,
+		PaymentDate:       gormDebtItem.PaymentDate,
+		PaymentMethod:     gormDebtItem.PaymentMethod,
+		Description:       gormDebtItem.Description,
+		Status:            gormDebtItem.Status,
+		ReceiptPhotoURL:   gormDebtItem.ReceiptPhotoURL,
+		VerifiedBy:        gormDebtItem.VerifiedBy,
+		VerifiedAt:        gormDebtItem.VerifiedAt,
+		VerificationNotes: gormDebtItem.VerificationNotes,
+		CreatedAt:         gormDebtItem.CreatedAt,
+		UpdatedAt:         gormDebtItem.UpdatedAt,
 	}
 }
 

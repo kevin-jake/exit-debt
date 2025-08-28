@@ -134,10 +134,11 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
 			mockDebtService := &mocks.MockDebtService{}
+			mockFileStorageService := &mocks.MockFileStorageService{}
 			tt.setupMock(mockDebtService)
 
 			logger := zerolog.New(nil)
-			debtHandler := handlers.NewDebtHandler(mockDebtService, logger)
+			debtHandler := handlers.NewDebtHandler(mockDebtService, mockFileStorageService, logger)
 
 			// Prepare request
 			requestBody, _ := json.Marshal(tt.requestBody)
@@ -254,7 +255,8 @@ func TestDebtHandler_GetUserDebtLists(t *testing.T) {
 			tt.setupMock(mockDebtService)
 
 			logger := zerolog.New(nil)
-			debtHandler := handlers.NewDebtHandler(mockDebtService, logger)
+			mockFileStorageService := &mocks.MockFileStorageService{}
+			debtHandler := handlers.NewDebtHandler(mockDebtService, mockFileStorageService, logger)
 
 			// Prepare request
 			req := httptest.NewRequest(http.MethodGet, "/api/debt-lists", nil)
@@ -383,7 +385,8 @@ func TestDebtHandler_CreateDebtItem(t *testing.T) {
 			tt.setupMock(mockDebtService)
 
 			logger := zerolog.New(nil)
-			debtHandler := handlers.NewDebtHandler(mockDebtService, logger)
+			mockFileStorageService := &mocks.MockFileStorageService{}
+			debtHandler := handlers.NewDebtHandler(mockDebtService, mockFileStorageService, logger)
 
 			// Prepare request
 			requestBody, _ := json.Marshal(tt.requestBody)

@@ -26,6 +26,7 @@ var (
 	ErrInvalidCurrency      = errors.New("invalid currency")
 	ErrInvalidPaymentMethod = errors.New("invalid payment method")
 	ErrInvalidDueDate       = errors.New("due date must be in the future")
+	ErrInvalidPaymentStatus = errors.New("invalid payment status")
 
 	// Generic errors
 	ErrInvalidInput       = errors.New("invalid input")

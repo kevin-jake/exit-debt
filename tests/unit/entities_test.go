@@ -527,6 +527,38 @@ func TestDebtItem_IsValid(t *testing.T) {
 			expectedError: entities.ErrInvalidPaymentMethod,
 			expectValid:   false,
 		},
+		{
+			name: "valid debt item with verification fields",
+			debtItem: &entities.DebtItem{
+				ID:                uuid.New(),
+				DebtListID:        uuid.New(),
+				Amount:            decimal.RequireFromString("200.00"),
+				Currency:          "USD",
+				PaymentMethod:     "bank_transfer",
+				PaymentDate:       time.Now(),
+				Status:            entities.PaymentStatusCompleted,
+				ReceiptPhotoURL:   func() *string { s := "https://example.com/receipt.jpg"; return &s }(),
+				VerifiedBy:        func() *uuid.UUID { id := uuid.New(); return &id }(),
+				VerifiedAt:        func() *time.Time { t := time.Now(); return &t }(),
+				VerificationNotes: func() *string { s := "Payment verified"; return &s }(),
+				CreatedAt:         time.Now(),
+				UpdatedAt:         time.Now(),
+			},
+			expectedError: nil,
+			expectValid:   true,
+		},
+		{
+			name: "invalid payment status",
+			debtItem: &entities.DebtItem{
+				DebtListID: uuid.New(),
+				Amount:     decimal.RequireFromString("200.00"),
+				Currency:   "USD",
+				PaymentMethod: "bank_transfer",
+				Status:     "invalid_status",
+			},
+			expectedError: entities.ErrInvalidPaymentStatus,
+			expectValid:   false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -542,5 +574,7 @@ func TestDebtItem_IsValid(t *testing.T) {
 		})
 	}
 }
+
+
 
 

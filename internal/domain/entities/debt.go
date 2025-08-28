@@ -7,6 +7,15 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Payment status constants (extended for verification)
+const (
+	PaymentStatusCompleted = "completed"
+	PaymentStatusPending   = "pending"
+	PaymentStatusFailed    = "failed"
+	PaymentStatusRefunded  = "refunded"
+	PaymentStatusRejected  = "rejected" // New status for rejected payments
+)
+
 // DebtList represents the core debt list entity
 type DebtList struct {
 	ID                  uuid.UUID
@@ -31,16 +40,20 @@ type DebtList struct {
 
 // DebtItem represents the core debt item (payment) entity
 type DebtItem struct {
-	ID            uuid.UUID
-	DebtListID    uuid.UUID
-	Amount        decimal.Decimal
-	Currency      string
-	PaymentDate   time.Time
-	PaymentMethod string
-	Description   *string
-	Status        string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                uuid.UUID
+	DebtListID        uuid.UUID
+	Amount            decimal.Decimal
+	Currency          string
+	PaymentDate       time.Time
+	PaymentMethod     string
+	Description       *string
+	Status            string
+	ReceiptPhotoURL   *string
+	VerifiedBy        *uuid.UUID
+	VerifiedAt        *time.Time
+	VerificationNotes *string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // CreateDebtListRequest represents a request to create a new debt list
@@ -70,22 +83,42 @@ type UpdateDebtListRequest struct {
 
 // CreateDebtItemRequest represents a request to create a new debt item (payment)
 type CreateDebtItemRequest struct {
-	DebtListID    uuid.UUID `json:"debt_list_id" validate:"required"`
-	Amount        string    `json:"amount" validate:"required"`
-	Currency      string    `json:"currency"`
-	PaymentDate   time.Time `json:"payment_date" validate:"required"`
-	PaymentMethod string    `json:"payment_method" validate:"required,oneof=cash bank_transfer check digital_wallet other"`
-	Description   *string   `json:"description"`
+	DebtListID        uuid.UUID `json:"debt_list_id" validate:"required"`
+	Amount            string    `json:"amount" validate:"required"`
+	Currency          string    `json:"currency"`
+	PaymentDate       time.Time `json:"payment_date" validate:"required"`
+	PaymentMethod     string    `json:"payment_method" validate:"required,oneof=cash bank_transfer check digital_wallet other"`
+	Description       *string   `json:"description"`
+	ReceiptPhotoURL   *string   `json:"receipt_photo_url"`
+	VerificationNotes *string   `json:"verification_notes"`
 }
 
 // UpdateDebtItemRequest represents a request to update a debt item
 type UpdateDebtItemRequest struct {
-	Amount        *string    `json:"amount"`
-	Currency      *string    `json:"currency"`
-	PaymentDate   *time.Time `json:"payment_date"`
-	PaymentMethod *string    `json:"payment_method" validate:"omitempty,oneof=cash bank_transfer check digital_wallet other"`
-	Description   *string    `json:"description"`
-	Status        *string    `json:"status" validate:"omitempty,oneof=completed pending failed refunded"`
+	Amount            *string    `json:"amount"`
+	Currency          *string    `json:"currency"`
+	PaymentDate       *time.Time `json:"payment_date"`
+	PaymentMethod     *string    `json:"payment_method" validate:"omitempty,oneof=cash bank_transfer check digital_wallet other"`
+	Description       *string    `json:"description"`
+	Status            *string    `json:"status" validate:"omitempty,oneof=completed pending failed refunded"`
+	ReceiptPhotoURL   *string    `json:"receipt_photo_url"`
+	VerificationNotes *string    `json:"verification_notes"`
+}
+
+// VerifyDebtItemRequest represents a request to verify a debt item
+type VerifyDebtItemRequest struct {
+	Status            string  `json:"status" validate:"required,oneof=completed rejected"`
+	VerificationNotes *string `json:"verification_notes"`
+}
+
+// DebtItemVerificationResponse represents verification details for a debt item
+type DebtItemVerificationResponse struct {
+	ID                uuid.UUID  `json:"id"`
+	Status            string     `json:"status"`
+	VerifiedBy        *uuid.UUID `json:"verified_by"`
+	VerifiedAt        *time.Time `json:"verified_at"`
+	VerificationNotes *string    `json:"verification_notes"`
+	ReceiptPhotoURL   *string    `json:"receipt_photo_url"`
 }
 
 // PaymentScheduleItem represents a scheduled payment
@@ -175,6 +208,9 @@ func (d *DebtItem) IsValid() error {
 	}
 	if d.PaymentMethod == "" {
 		return ErrInvalidPaymentMethod
+	}
+	if d.Status != "" && d.Status != PaymentStatusCompleted && d.Status != PaymentStatusPending && d.Status != PaymentStatusFailed && d.Status != PaymentStatusRefunded && d.Status != PaymentStatusRejected {
+		return ErrInvalidPaymentStatus
 	}
 	return nil
 }

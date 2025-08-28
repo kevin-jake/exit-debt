@@ -23,6 +23,14 @@ type Config struct {
 	JWTExpiry  string
 
 	LogLevel string
+
+	// S3 Configuration
+	S3Region          string
+	S3BucketName      string
+	S3AccessKeyID     string
+	S3SecretAccessKey string
+	S3Endpoint        string
+	S3ForcePathStyle  bool
 }
 
 func Load() (*Config, error) {
@@ -35,6 +43,12 @@ func Load() (*Config, error) {
 	port, err := strconv.Atoi(getEnv("DB_PORT", "5432"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid DB_PORT: %v", err)
+	}
+
+	// Parse S3 force path style boolean
+	s3ForcePathStyle := false
+	if forcePathStyle := getEnv("S3_FORCE_PATH_STYLE", "false"); forcePathStyle == "true" {
+		s3ForcePathStyle = true
 	}
 
 	return &Config{
@@ -52,6 +66,14 @@ func Load() (*Config, error) {
 		JWTExpiry: getEnv("JWT_EXPIRY", "24h"),
 
 		LogLevel: getEnv("LOG_LEVEL", "debug"),
+
+		// S3 Configuration
+		S3Region:          getEnv("S3_REGION", "us-east-1"),
+		S3BucketName:      getEnv("S3_BUCKET_NAME", ""),
+		S3AccessKeyID:     getEnv("S3_ACCESS_KEY_ID", ""),
+		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
+		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
+		S3ForcePathStyle:  s3ForcePathStyle,
 	}, nil
 }
 

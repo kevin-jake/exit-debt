@@ -127,3 +127,28 @@ func (m *MockDebtService) GetTotalPaymentsForDebtList(ctx context.Context, debtL
 	}
 	return args.Get(0).(*entities.PaymentSummary), args.Error(1)
 }
+
+// Payment verification methods
+func (m *MockDebtService) VerifyDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.VerifyDebtItemRequest) (*entities.DebtItem, error) {
+	args := m.Called(ctx, id, userID, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.DebtItem), args.Error(1)
+}
+
+func (m *MockDebtService) GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.DebtItem), args.Error(1)
+}
+
+func (m *MockDebtService) RejectDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, notes *string) (*entities.DebtItem, error) {
+	args := m.Called(ctx, id, userID, notes)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.DebtItem), args.Error(1)
+}

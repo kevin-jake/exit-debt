@@ -11,6 +11,7 @@ import (
 
 	"exit-debt/internal/domain/entities"
 	"exit-debt/internal/domain/interfaces"
+	"exit-debt/internal/mocks"
 	"exit-debt/internal/models"
 	"exit-debt/internal/repository"
 	"exit-debt/internal/services"
@@ -55,7 +56,9 @@ func (suite *UserContactDebtWorkflowTestSuite) SetupSuite() {
 	// Initialize services
 	suite.paymentScheduleService = services.NewPaymentScheduleService()
 	suite.contactService = services.NewContactService(suite.contactRepo, suite.userRepo)
-	suite.debtService = services.NewDebtService(suite.debtListRepo, suite.debtItemRepo, suite.contactRepo, suite.paymentScheduleService)
+	// Create mock file storage service for testing
+	mockFileStorageService := &mocks.MockFileStorageService{}
+	suite.debtService = services.NewDebtService(suite.debtListRepo, suite.debtItemRepo, suite.contactRepo, suite.paymentScheduleService, mockFileStorageService)
 	
 	authService, err := services.NewAuthService(suite.userRepo, suite.contactService, "test-secret", "24h")
 	suite.Require().NoError(err)
@@ -166,22 +169,23 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 	suite.NoError(err)
 	suite.NotNil(payment)
 	suite.Equal("400.00", payment.Amount.StringFixed(2))
-	suite.Equal("completed", payment.Status)
+	// For "i_owe" debts, payments are initially pending for verification
+	suite.Equal("pending", payment.Status)
 
-	// Step 5: Verify debt status update
+	// Step 5: Verify debt status update (pending payments don't count toward total yet)
 	updatedDebtList, err := suite.debtService.GetDebtList(ctx, debtList.ID, user1ID)
 	suite.NoError(err)
-	suite.Equal("400.00", updatedDebtList.TotalPaymentsMade.StringFixed(2))
-	suite.Equal("800.00", updatedDebtList.TotalRemainingDebt.StringFixed(2))
+	suite.Equal("0.00", updatedDebtList.TotalPaymentsMade.StringFixed(2))
+	suite.Equal("1200.00", updatedDebtList.TotalRemainingDebt.StringFixed(2))
 
-	// Step 6: Get payment summary
+	// Step 6: Get payment summary (pending payments don't count toward total yet)
 	paymentSummary, err := suite.debtService.GetTotalPaymentsForDebtList(ctx, debtList.ID, user1ID)
 	suite.NoError(err)
 	suite.Equal("1200.00", paymentSummary.TotalAmount.StringFixed(2))
-	suite.Equal("400.00", paymentSummary.TotalPaid.StringFixed(2))
-	suite.Equal("800.00", paymentSummary.RemainingDebt.StringFixed(2))
-	suite.Equal("33.33", paymentSummary.PercentagePaid.StringFixed(2))
-	suite.Len(paymentSummary.Payments, 1)
+	suite.Equal("0.00", paymentSummary.TotalPaid.StringFixed(2))
+	suite.Equal("1200.00", paymentSummary.RemainingDebt.StringFixed(2))
+	suite.Equal("0.00", paymentSummary.PercentagePaid.StringFixed(2))
+	suite.Len(paymentSummary.Payments, 0) // Pending payments don't appear in summary yet
 
 	// Step 7: User2 creates a debt where User1 owes them money (different perspective)
 	user1Contact, err := suite.contactService.GetUserContacts(ctx, user2ID)
@@ -233,10 +237,14 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 	suite.NotNil(user2OwnedDebt)
 	suite.Equal("owed_to_me", user2OwnedDebt.DebtType)
 
-	// Step 9: Test authorization - User1 cannot access User2's debt
-	_, err = suite.debtService.GetDebtList(ctx, debtList2.ID, user1ID)
-	suite.Error(err)
-	suite.ErrorIs(err, entities.ErrDebtListNotFound)
+	// Step 9: Test authorization - User1 can access User2's debt since they are a contact in it
+	debtList2ForUser1, err := suite.debtService.GetDebtList(ctx, debtList2.ID, user1ID)
+	suite.NoError(err)
+	suite.Equal(debtList2.ID, debtList2ForUser1.ID)
+	// The debt type should be flipped to User1's perspective (they owe money)
+	suite.Equal("i_owe", debtList2ForUser1.DebtType)
+	// User1 should see the contact information (User2's info)
+	suite.Equal(user2ID, debtList2ForUser1.Contact.ID)
 
 	// Step 10: Test overdue functionality
 	// Update the debt to be overdue by setting next payment date in the past

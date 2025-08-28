@@ -179,7 +179,8 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			tt.setupMocks(debtListRepo, debtItemRepo, contactRepo, paymentService)
 
 			// Create service
-			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService)
+			fileStorageService := &mocks.MockFileStorageService{}
+			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService, fileStorageService)
 
 			// Execute
 			ctx := context.Background()
@@ -310,9 +311,69 @@ func TestDebtService_CreateDebtItem(t *testing.T) {
 			},
 			setupMocks: func(debtListRepo *mocks.MockDebtListRepository, debtItemRepo *mocks.MockDebtItemRepository, contactRepo *mocks.MockContactRepository, paymentService *mocks.MockPaymentScheduleService) {
 				debtListRepo.On("BelongsToUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), userID).Return(false, nil)
+				// Mock GetDebtListsWhereUserIsContact to return empty list (user is not a contact)
+				debtListRepo.On("GetDebtListsWhereUserIsContact", mock.Anything, userID).Return([]entities.DebtListResponse{}, nil)
 			},
 			expectedError: entities.ErrDebtListNotFound,
 			expectSuccess: false,
+		},
+		{
+			name:   "create payment as contact successfully",
+			userID: userID,
+			request: &entities.CreateDebtItemRequest{
+				DebtListID:    debtListID,
+				Amount:        "150.00",
+				Currency:      "EUR",
+				PaymentDate:   paymentDate,
+				PaymentMethod: "cash",
+				Description:   stringPtr("Partial payment"),
+			},
+			setupMocks: func(debtListRepo *mocks.MockDebtListRepository, debtItemRepo *mocks.MockDebtItemRepository, contactRepo *mocks.MockContactRepository, paymentService *mocks.MockPaymentScheduleService) {
+				// User doesn't own the debt list
+				debtListRepo.On("BelongsToUser", mock.Anything, debtListID, userID).Return(false, nil)
+				
+				// User is a contact in the debt list
+				contactDebtList := entities.DebtListResponse{
+					ID:       debtListID,
+					UserID:   uuid.New(), // Different user owns it
+					DebtType: "owed_to_me", // From the owner's perspective
+				}
+				debtListRepo.On("GetDebtListsWhereUserIsContact", mock.Anything, userID).Return([]entities.DebtListResponse{contactDebtList}, nil)
+				
+				// Get the debt list for currency and other details
+				debtList := &entities.DebtList{
+					ID:              debtListID,
+					UserID:          uuid.New(), // Different user owns it
+					Currency:        "EUR",
+					DebtType:        "owed_to_me", // From the owner's perspective
+					TotalAmount:     decimal.RequireFromString("500.00"),
+					NextPaymentDate: time.Now().AddDate(0, 1, 0),
+					CreatedAt:       time.Now(),
+				}
+				debtListRepo.On("GetByID", mock.Anything, debtListID).Return(debtList, nil)
+				
+				// Mock debt item creation
+				debtItemRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.DebtItem")).Return(nil)
+				
+				// Mock the update calls
+				debtItemRepo.On("GetTotalPaidForDebtList", mock.Anything, debtListID).Return(decimal.RequireFromString("150.00"), nil)
+				debtItemRepo.On("GetLastPaymentDate", mock.Anything, debtListID).Return(&paymentDate, nil)
+				paymentService.On("CalculateNextPaymentDate", mock.AnythingOfType("*entities.DebtList"), &paymentDate).Return(time.Now().AddDate(0, 1, 0))
+				debtListRepo.On("UpdatePaymentTotals", mock.Anything, debtListID, decimal.RequireFromString("150.00"), decimal.RequireFromString("350.00")).Return(nil)
+				debtListRepo.On("UpdateStatus", mock.Anything, debtListID, "active").Return(nil)
+				debtListRepo.On("UpdateNextPaymentDate", mock.Anything, debtListID, mock.AnythingOfType("time.Time")).Return(nil)
+			},
+			expectedError: nil,
+			expectSuccess: true,
+			validateResult: func(t *testing.T, debtItem *entities.DebtItem) {
+				assert.Equal(t, debtListID, debtItem.DebtListID)
+				assert.Equal(t, "150", debtItem.Amount.String())
+				assert.Equal(t, "EUR", debtItem.Currency)
+				assert.Equal(t, "cash", debtItem.PaymentMethod)
+				// Since the user is a contact in an "owed_to_me" debt list, 
+				// from their perspective it's "i_owe", so status should be "pending"
+				assert.Equal(t, "pending", debtItem.Status)
+			},
 		},
 	}
 
@@ -326,7 +387,8 @@ func TestDebtService_CreateDebtItem(t *testing.T) {
 			tt.setupMocks(debtListRepo, debtItemRepo, contactRepo, paymentService)
 
 			// Create service
-			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService)
+			fileStorageService := &mocks.MockFileStorageService{}
+			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService, fileStorageService)
 
 			// Execute
 			ctx := context.Background()
@@ -415,7 +477,8 @@ func TestDebtService_GetOverdueItems(t *testing.T) {
 			tt.setupMocks(debtListRepo, debtItemRepo, contactRepo, paymentService)
 
 			// Create service
-			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService)
+			fileStorageService := &mocks.MockFileStorageService{}
+			debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentService, fileStorageService)
 
 			// Execute
 			ctx := context.Background()

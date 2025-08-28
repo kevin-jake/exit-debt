@@ -161,6 +161,25 @@ func (m *MockDebtItemRepository) GetLastPaymentDate(ctx context.Context, debtLis
 	return args.Get(0).(*time.Time), args.Error(1)
 }
 
+// Verification methods
+func (m *MockDebtItemRepository) GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]entities.DebtItem), args.Error(1)
+}
+
+func (m *MockDebtItemRepository) UpdatePaymentStatus(ctx context.Context, debtItemID uuid.UUID, status string, verifiedBy uuid.UUID, notes *string) error {
+	args := m.Called(ctx, debtItemID, status, verifiedBy, notes)
+	return args.Error(0)
+}
+
+func (m *MockDebtItemRepository) UpdateReceiptPhoto(ctx context.Context, debtItemID uuid.UUID, photoURL *string) error {
+	args := m.Called(ctx, debtItemID, photoURL)
+	return args.Error(0)
+}
+
 // MockPaymentScheduleService is a mock implementation of PaymentScheduleService
 type MockPaymentScheduleService struct {
 	mock.Mock

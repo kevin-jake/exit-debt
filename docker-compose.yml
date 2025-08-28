@@ -15,6 +15,22 @@ services:
     networks:
       - debt-tracker-network
 
+  localstack:
+    image: localstack/localstack:latest
+    container_name: exit-debt-localstack
+    restart: unless-stopped
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_DEFAULT_REGION=us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - debt-tracker-network
+
 volumes:
   postgres_data:
     driver: local

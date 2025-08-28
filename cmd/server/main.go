@@ -70,7 +70,14 @@ func main() {
 	// Initialize services with dependency injection
 	paymentScheduleService := services.NewPaymentScheduleService()
 	contactService := services.NewContactService(contactRepo, userRepo)
-	debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentScheduleService)
+	
+	// Initialize S3 service for file storage
+	s3Service, err := services.NewS3Service(cfg, logger)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to initialize S3 service")
+	}
+	
+	debtService := services.NewDebtService(debtListRepo, debtItemRepo, contactRepo, paymentScheduleService, s3Service)
 
 	// Initialize auth service with all dependencies
 	authService, err := services.NewAuthService(userRepo, contactService, cfg.JWTSecret, cfg.JWTExpiry)
@@ -81,7 +88,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService, logger)
 	contactHandler := handlers.NewContactHandler(contactService, logger)
-	debtHandler := handlers.NewDebtHandler(debtService, logger)
+	debtHandler := handlers.NewDebtHandler(debtService, s3Service, logger)
 
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService, logger)
@@ -158,6 +165,12 @@ func main() {
 				// Debt item (payment) operations
 				debts.POST("/payments", debtHandler.CreateDebtItem)
 				debts.GET("/:id/payments", debtHandler.GetDebtListItems)
+
+				// Payment verification operations
+				debts.GET("/verifications/pending", debtHandler.GetPendingVerifications)
+				debts.POST("/payments/:id/verify", debtHandler.VerifyDebtItem)
+				debts.POST("/payments/:id/reject", debtHandler.RejectDebtItem)
+				debts.POST("/payments/:id/receipt", debtHandler.UploadReceipt)
 
 				// Analytics and reporting
 				debts.GET("/overdue", debtHandler.GetOverdueItems)

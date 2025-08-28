@@ -18,6 +18,7 @@ type debtService struct {
 	debtItemRepo           interfaces.DebtItemRepository
 	contactRepo            interfaces.ContactRepository
 	paymentScheduleService interfaces.PaymentScheduleService
+	fileStorageService     interfaces.FileStorageService
 }
 
 // NewDebtService creates a new debt service
@@ -26,12 +27,14 @@ func NewDebtService(
 	debtItemRepo interfaces.DebtItemRepository,
 	contactRepo interfaces.ContactRepository,
 	paymentScheduleService interfaces.PaymentScheduleService,
+	fileStorageService interfaces.FileStorageService,
 ) interfaces.DebtService {
 	return &debtService{
 		debtListRepo:           debtListRepo,
 		debtItemRepo:           debtItemRepo,
 		contactRepo:            contactRepo,
 		paymentScheduleService: paymentScheduleService,
+		fileStorageService:     fileStorageService,
 	}
 }
 
@@ -153,21 +156,45 @@ func (s *debtService) CreateDebtList(ctx context.Context, userID uuid.UUID, req 
 }
 
 func (s *debtService) GetDebtList(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtListResponse, error) {
-	// Check if debt list belongs to user
+	// First check if debt list belongs to user (user is the owner)
 	belongs, err := s.debtListRepo.BelongsToUser(ctx, id, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify ownership: %w", err)
 	}
-	if !belongs {
-		return nil, entities.ErrDebtListNotFound
+	
+	if belongs {
+		// User owns the debt list, get it with relations
+		debtListResponse, err := s.debtListRepo.GetByIDWithRelations(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get debt list: %w", err)
+		}
+		return debtListResponse, nil
 	}
-
-	debtListResponse, err := s.debtListRepo.GetByIDWithRelations(ctx, id)
+	
+	// If user doesn't own it, check if they are a contact in the debt list
+	// This allows users to view debt lists where they owe money or are owed money
+	contactDebtLists, err := s.debtListRepo.GetDebtListsWhereUserIsContact(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get debt list: %w", err)
+		return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
 	}
-
-	return debtListResponse, nil
+	
+	// Find the specific debt list where user is a contact
+	for _, contactDebtList := range contactDebtLists {
+		if contactDebtList.ID == id {
+			// Flip the debt type for the user's perspective
+			// When a user views a debt list where they are the contact,
+			// the debt type should be from their perspective
+			if contactDebtList.DebtType == "owed_to_me" {
+				contactDebtList.DebtType = "i_owe"
+			} else if contactDebtList.DebtType == "i_owe" {
+				contactDebtList.DebtType = "owed_to_me"
+			}
+			return &contactDebtList, nil
+		}
+	}
+	
+	// User neither owns the debt list nor is a contact in it
+	return nil, entities.ErrDebtListNotFound
 }
 
 func (s *debtService) GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error) {
@@ -317,13 +344,35 @@ func (s *debtService) CreateDebtItem(ctx context.Context, userID uuid.UUID, req 
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Verify debt list exists and belongs to user
+	// First check if debt list belongs to user (user is the owner)
 	belongs, err := s.debtListRepo.BelongsToUser(ctx, req.DebtListID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify debt list ownership: %w", err)
 	}
-	if !belongs {
-		return nil, entities.ErrDebtListNotFound
+	
+	if belongs {
+		// User owns the debt list, proceed with creation
+	} else {
+		// If user doesn't own it, check if they are a contact in the debt list
+		// This allows users to create debt items for debt lists where they owe money or are owed money
+		contactDebtLists, err := s.debtListRepo.GetDebtListsWhereUserIsContact(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
+		}
+		
+		// Check if the user is a contact in the specific debt list
+		userIsContact := false
+		for _, contactDebtList := range contactDebtLists {
+			if contactDebtList.ID == req.DebtListID {
+				userIsContact = true
+				break
+			}
+		}
+		
+		if !userIsContact {
+			// User neither owns the debt list nor is a contact in it
+			return nil, entities.ErrDebtListNotFound
+		}
 	}
 
 	// Get debt list for currency default
@@ -349,17 +398,39 @@ func (s *debtService) CreateDebtItem(ctx context.Context, userID uuid.UUID, req 
 		currency = debtList.Currency
 	}
 
+	// Determine initial status based on the user's perspective
+	// When a user creates a payment, we need to consider their perspective:
+	// - If they owe money (i_owe from their perspective), payments are pending until verified
+	// - If they are owed money (owed_to_me from their perspective), payments are completed
+	initialStatus := "completed"
+	
+	// Check if the user is the owner or a contact to determine their perspective
+	if belongs {
+		// User owns the debt list, use the debt list's debt type
+		if debtList.DebtType == "i_owe" {
+			initialStatus = "pending"
+		}
+	} else {
+		// User is a contact, determine their perspective by flipping the debt type
+		// If the debt list is "owed_to_me" (someone owes them), then from the contact's perspective it's "i_owe"
+		if debtList.DebtType == "owed_to_me" {
+			initialStatus = "pending"
+		}
+	}
+
 	debtItem := &entities.DebtItem{
-		ID:            uuid.New(),
-		DebtListID:    req.DebtListID,
-		Amount:        amount,
-		Currency:      currency,
-		PaymentDate:   req.PaymentDate,
-		PaymentMethod: req.PaymentMethod,
-		Description:   req.Description,
-		Status:        "completed",
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		ID:                uuid.New(),
+		DebtListID:        req.DebtListID,
+		Amount:            amount,
+		Currency:          currency,
+		PaymentDate:       req.PaymentDate,
+		PaymentMethod:     req.PaymentMethod,
+		Description:       req.Description,
+		Status:            initialStatus,
+		ReceiptPhotoURL:   req.ReceiptPhotoURL,
+		VerificationNotes: req.VerificationNotes,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	// Validate debt item entity
@@ -398,21 +469,42 @@ func (s *debtService) GetDebtItem(ctx context.Context, id uuid.UUID, userID uuid
 }
 
 func (s *debtService) GetDebtListItems(ctx context.Context, debtListID uuid.UUID, userID uuid.UUID) ([]entities.DebtItem, error) {
-	// Check if debt list belongs to user
+	// First check if debt list belongs to user (user is the owner)
 	belongs, err := s.debtListRepo.BelongsToUser(ctx, debtListID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify ownership: %w", err)
 	}
-	if !belongs {
-		return nil, entities.ErrDebtListNotFound
+	
+	if belongs {
+		// User owns the debt list, get the debt items
+		debtItems, err := s.debtItemRepo.GetByDebtListID(ctx, debtListID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get debt list items: %w", err)
+		}
+		return debtItems, nil
 	}
-
-	debtItems, err := s.debtItemRepo.GetByDebtListID(ctx, debtListID)
+	
+	// If user doesn't own it, check if they are a contact in the debt list
+	// This allows users to view debt items for debt lists where they owe money or are owed money
+	contactDebtLists, err := s.debtListRepo.GetDebtListsWhereUserIsContact(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get debt list items: %w", err)
+		return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
 	}
-
-	return debtItems, nil
+	
+	// Check if the user is a contact in the specific debt list
+	for _, contactDebtList := range contactDebtLists {
+		if contactDebtList.ID == debtListID {
+			// User is a contact in this debt list, get the debt items
+			debtItems, err := s.debtItemRepo.GetByDebtListID(ctx, debtListID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get debt list items: %w", err)
+			}
+			return debtItems, nil
+		}
+	}
+	
+	// User neither owns the debt list nor is a contact in it
+	return nil, entities.ErrDebtListNotFound
 }
 
 func (s *debtService) UpdateDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateDebtItemRequest) (*entities.DebtItem, error) {
@@ -421,13 +513,41 @@ func (s *debtService) UpdateDebtItem(ctx context.Context, id uuid.UUID, userID u
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Check if debt item belongs to user's debt list
+	// First check if debt item belongs to user's debt list (user is the owner)
 	belongs, err := s.debtItemRepo.BelongsToUserDebtList(ctx, id, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify ownership: %w", err)
 	}
-	if !belongs {
-		return nil, entities.ErrDebtItemNotFound
+	
+	if belongs {
+		// User owns the debt list, proceed with update
+	} else {
+		// If user doesn't own it, check if they are a contact in the debt list
+		// This allows users to update debt items for debt lists where they owe money or are owed money
+		debtItem, err := s.debtItemRepo.GetByID(ctx, id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get debt item: %w", err)
+		}
+		
+		// Check if the user is a contact in this debt list
+		contactDebtLists, err := s.debtListRepo.GetDebtListsWhereUserIsContact(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get debt lists where user is contact: %w", err)
+		}
+		
+		// Check if the user is a contact in the specific debt list
+		userIsContact := false
+		for _, contactDebtList := range contactDebtLists {
+			if contactDebtList.ID == debtItem.DebtListID {
+				userIsContact = true
+				break
+			}
+		}
+		
+		if !userIsContact {
+			// User neither owns the debt list nor is a contact in it
+			return nil, entities.ErrDebtItemNotFound
+		}
 	}
 
 	// Get existing debt item
@@ -458,6 +578,20 @@ func (s *debtService) UpdateDebtItem(ctx context.Context, id uuid.UUID, userID u
 	}
 	if req.Status != nil {
 		debtItem.Status = *req.Status
+	}
+	if req.ReceiptPhotoURL != nil {
+		// If there's an old receipt photo, delete it from S3
+		if debtItem.ReceiptPhotoURL != nil && *debtItem.ReceiptPhotoURL != "" {
+			if err := s.fileStorageService.DeleteReceipt(ctx, *debtItem.ReceiptPhotoURL); err != nil {
+				// Log the error but don't fail the update
+				// In production, you might want to handle this differently
+				fmt.Printf("Warning: failed to delete old receipt photo: %v\n", err)
+			}
+		}
+		debtItem.ReceiptPhotoURL = req.ReceiptPhotoURL
+	}
+	if req.VerificationNotes != nil {
+		debtItem.VerificationNotes = req.VerificationNotes
 	}
 
 	debtItem.UpdatedAt = time.Now()
@@ -496,6 +630,15 @@ func (s *debtService) DeleteDebtItem(ctx context.Context, id uuid.UUID, userID u
 	}
 
 	debtListID := debtItem.DebtListID
+
+	// If there's a receipt photo, delete it from S3
+	if debtItem.ReceiptPhotoURL != nil && *debtItem.ReceiptPhotoURL != "" {
+		if err := s.fileStorageService.DeleteReceipt(ctx, *debtItem.ReceiptPhotoURL); err != nil {
+			// Log the error but don't fail the deletion
+			// In production, you might want to handle this differently
+			fmt.Printf("Warning: failed to delete receipt photo: %v\n", err)
+		}
+	}
 
 	if err := s.debtItemRepo.Delete(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete debt item: %w", err)
@@ -634,6 +777,61 @@ func (s *debtService) GetTotalPaymentsForDebtList(ctx context.Context, debtListI
 		NumberOfPayments: len(payments),
 		Payments:         payments,
 	}, nil
+}
+
+// Payment verification operations
+
+func (s *debtService) VerifyDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.VerifyDebtItemRequest) (*entities.DebtItem, error) {
+	// Get the debt item to check if it exists and get the debt list ID
+	debtItem, err := s.GetDebtItem(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the payment status and verification details
+	if err := s.debtItemRepo.UpdatePaymentStatus(ctx, id, req.Status, userID, req.VerificationNotes); err != nil {
+		return nil, fmt.Errorf("failed to update payment status: %w", err)
+	}
+
+	// Get the updated debt item
+	updatedDebtItem, err := s.GetDebtItem(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update debt list totals if payment is completed
+	if req.Status == entities.PaymentStatusCompleted {
+		if err := s.updateDebtListStatusAndPaymentTotals(ctx, debtItem.DebtListID); err != nil {
+			return nil, fmt.Errorf("failed to update debt list totals: %w", err)
+		}
+	}
+
+	return updatedDebtItem, nil
+}
+
+func (s *debtService) GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error) {
+	return s.debtItemRepo.GetPendingVerifications(ctx, userID)
+}
+
+func (s *debtService) RejectDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, notes *string) (*entities.DebtItem, error) {
+	// Check if the debt item exists and belongs to the user
+	_, err := s.GetDebtItem(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update the payment status to rejected
+	if err := s.debtItemRepo.UpdatePaymentStatus(ctx, id, entities.PaymentStatusRejected, userID, notes); err != nil {
+		return nil, fmt.Errorf("failed to reject payment: %w", err)
+	}
+
+	// Get the updated debt item
+	updatedDebtItem, err := s.GetDebtItem(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedDebtItem, nil
 }
 
 // Helper methods
