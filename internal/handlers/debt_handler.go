@@ -931,6 +931,60 @@ func (h *DebtHandler) UploadReceipt(c *gin.Context) {
 	c.JSON(http.StatusOK, NewSuccessResponse("Receipt uploaded successfully", debtItem, requestID))
 }
 
+// GetReceiptPhoto serves a receipt photo from S3
+func (h *DebtHandler) GetReceiptPhoto(c *gin.Context) {
+	requestID := c.GetString("request_id")
+	if requestID == "" {
+		requestID = uuid.New().String()
+	}
+
+	// Get user ID from context (set by auth middleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		h.logger.Warn().Str("request_id", requestID).Msg("User ID not found in context")
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("Unauthorized", "", requestID))
+		return
+	}
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		h.logger.Warn().Str("request_id", requestID).Msg("Invalid user ID type in context")
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("Unauthorized", "", requestID))
+		return
+	}
+
+	// Get the photo path from URL parameters
+	photoPath := c.Param("photo_path")
+	if photoPath == "" {
+		h.logger.Warn().Str("request_id", requestID).Msg("Photo path not provided")
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Photo path is required", "", requestID))
+		return
+	}
+
+	// Construct the full relative path
+	fullPath := fmt.Sprintf("/api/v1/receipts/%s", photoPath)
+
+	logger := h.logger.With().Str("request_id", requestID).Str("user_id", userUUID.String()).Str("photo_path", fullPath).Str("method", "GetReceiptPhoto").Logger()
+
+	// Get the file from S3
+	fileContent, contentType, err := h.fileStorageService.GetReceiptFile(c.Request.Context(), fullPath)
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to retrieve receipt photo")
+		c.JSON(http.StatusNotFound, NewErrorResponse("Receipt photo not found", "", requestID))
+		return
+	}
+
+	// Set appropriate headers for file serving
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Length", fmt.Sprintf("%d", len(fileContent)))
+	c.Header("Cache-Control", "public, max-age=3600") // Cache for 1 hour
+	c.Header("Content-Disposition", "inline")
+
+	// Serve the file
+	c.Data(http.StatusOK, contentType, fileContent)
+
+	logger.Info().Str("content_type", contentType).Int("size", len(fileContent)).Msg("Receipt photo served successfully")
+}
+
 // validateReceiptFile validates the uploaded receipt file
 func (h *DebtHandler) validateReceiptFile(header *multipart.FileHeader) error {
 	// Check file size (max 10MB)

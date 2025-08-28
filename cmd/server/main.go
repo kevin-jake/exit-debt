@@ -172,6 +172,9 @@ func main() {
 				debts.POST("/payments/:id/reject", debtHandler.RejectDebtItem)
 				debts.POST("/payments/:id/receipt", debtHandler.UploadReceipt)
 
+				// Receipt photo serving
+				debts.GET("/receipts/*photo_path", debtHandler.GetReceiptPhoto)
+
 				// Analytics and reporting
 				debts.GET("/overdue", debtHandler.GetOverdueItems)
 				debts.GET("/due-soon", debtHandler.GetDueSoonItems)

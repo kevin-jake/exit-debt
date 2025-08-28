@@ -77,7 +77,7 @@ func NewS3Service(cfg *config.Config, logger zerolog.Logger) (*S3Service, error)
 	}, nil
 }
 
-// UploadReceipt uploads a receipt photo and returns the S3 URL
+// UploadReceipt uploads a receipt photo and returns the relative path
 func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string) (string, error) {
 	// Validate file type
 	if !s.IsValidImageType(contentType) {
@@ -107,11 +107,11 @@ func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename 
 		return "", fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
-	// Generate S3 URL
-	s3URL := fmt.Sprintf("s3://%s/%s", s.bucketName, uniqueFilename)
-	s.logger.Info().Str("filename", uniqueFilename).Msg("Receipt uploaded successfully to S3")
+	// Return relative path instead of S3 URL
+	relativePath := fmt.Sprintf("/api/v1/receipts/%s", uniqueFilename)
+	s.logger.Info().Str("filename", uniqueFilename).Str("relative_path", relativePath).Msg("Receipt uploaded successfully to S3")
 
-	return s3URL, nil
+	return relativePath, nil
 }
 
 // DeleteReceipt deletes a receipt photo from S3
@@ -159,6 +159,42 @@ func (s *S3Service) GetReceiptURL(ctx context.Context, fileURL string) (string, 
 	return req.URL, nil
 }
 
+// GetReceiptFile retrieves a receipt file from S3 and returns the file content and metadata
+func (s *S3Service) GetReceiptFile(ctx context.Context, fileURL string) ([]byte, string, error) {
+	// Extract key from relative path or S3 URL
+	key, err := s.ExtractKeyFromURL(fileURL)
+	if err != nil {
+		return nil, "", fmt.Errorf("invalid file path: %w", err)
+	}
+
+	// Get object from S3
+	result, err := s.s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		s.logger.Error().Err(err).Str("key", key).Msg("Failed to retrieve receipt from S3")
+		return nil, "", fmt.Errorf("failed to retrieve file from S3: %w", err)
+	}
+	defer result.Body.Close()
+
+	// Read file content
+	fileContent, err := io.ReadAll(result.Body)
+	if err != nil {
+		s.logger.Error().Err(err).Str("key", key).Msg("Failed to read receipt content from S3")
+		return nil, "", fmt.Errorf("failed to read file content: %w", err)
+	}
+
+	// Get content type from S3 metadata
+	contentType := "application/octet-stream" // default
+	if result.ContentType != nil {
+		contentType = *result.ContentType
+	}
+
+	s.logger.Info().Str("key", key).Str("content_type", contentType).Int("size", len(fileContent)).Msg("Retrieved receipt file from S3")
+	return fileContent, contentType, nil
+}
+
 // IsValidImageType checks if the content type is a valid image type
 func (s *S3Service) IsValidImageType(contentType string) bool {
 	validTypes := map[string]bool{
@@ -171,19 +207,29 @@ func (s *S3Service) IsValidImageType(contentType string) bool {
 	return validTypes[contentType]
 }
 
-// ExtractKeyFromURL extracts the S3 key from an S3 URL
+// ExtractKeyFromURL extracts the S3 key from a relative path or S3 URL
 func (s *S3Service) ExtractKeyFromURL(fileURL string) (string, error) {
-	// Handle different URL formats
+	// Handle relative path format: /api/v1/receipts/receipts/2024/01/15/uuid.jpg
+	if strings.HasPrefix(fileURL, "/api/v1/receipts/") {
+		// Remove the /api/v1/receipts/ prefix to get the S3 key
+		key := strings.TrimPrefix(fileURL, "/api/v1/receipts/")
+		if key == "" {
+			return "", fmt.Errorf("invalid relative path format: %s", fileURL)
+		}
+		return key, nil
+	}
+	
+	// Handle S3 URL format: s3://bucket-name/key
 	if strings.HasPrefix(fileURL, "s3://") {
-		// s3://bucket-name/key format
 		parts := strings.SplitN(fileURL, "/", 4)
 		if len(parts) < 4 {
 			return "", fmt.Errorf("invalid S3 URL format: %s", fileURL)
 		}
 		return parts[3], nil
-	} else if strings.HasPrefix(fileURL, "https://") {
-		// https://bucket-name.s3.region.amazonaws.com/key format
-		// This is a simplified extraction - in production you might want more robust parsing
+	}
+	
+	// Handle HTTPS S3 URL format: https://bucket-name.s3.region.amazonaws.com/key
+	if strings.HasPrefix(fileURL, "https://") {
 		parts := strings.Split(fileURL, "/")
 		if len(parts) < 4 {
 			return "", fmt.Errorf("invalid S3 HTTPS URL format: %s", fileURL)

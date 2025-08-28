@@ -26,3 +26,8 @@ func (m *MockFileStorageService) GetReceiptURL(ctx context.Context, fileURL stri
 	args := m.Called(ctx, fileURL)
 	return args.String(0), args.Error(1)
 }
+
+func (m *MockFileStorageService) GetReceiptFile(ctx context.Context, fileURL string) ([]byte, string, error) {
+	args := m.Called(ctx, fileURL)
+	return args.Get(0).([]byte), args.String(1), args.Error(2)
+}
