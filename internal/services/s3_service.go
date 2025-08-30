@@ -84,14 +84,15 @@ func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename 
 		return "", fmt.Errorf("invalid file type: %s. Only images are allowed", contentType)
 	}
 
-	// Generate unique filename
+	// Generate unique filename for S3 storage (with date structure for organization)
 	ext := filepath.Ext(filename)
+	uuidStr := uuid.New().String()
 	uniqueFilename := fmt.Sprintf("receipts/%s/%s%s", 
 		time.Now().Format("2006/01/02"), 
-		uuid.New().String(), 
+		uuidStr, 
 		ext)
 
-	// Upload file to S3
+	// Upload file to S3 with organized structure
 	_, err := s.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucketName),
 		Key:         aws.String(uniqueFilename),
@@ -107,11 +108,30 @@ func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename 
 		return "", fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
-	// Return relative path instead of S3 URL
-	relativePath := fmt.Sprintf("/api/v1/receipts/%s", uniqueFilename)
-	s.logger.Info().Str("filename", uniqueFilename).Str("relative_path", relativePath).Msg("Receipt uploaded successfully to S3")
+	// Also upload to a flat structure for easy API access
+	flatKey := fmt.Sprintf("receipts-flat/%s%s", uuidStr, ext)
+	_, err = s.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(s.bucketName),
+		Key:         aws.String(flatKey),
+		Body:        file,
+		ContentType: aws.String(contentType),
+		Metadata: map[string]string{
+			"original-filename": filename,
+			"uploaded-at":       time.Now().Format(time.RFC3339),
+			"organized-key":     uniqueFilename, // Reference to the organized structure
+		},
+	})
+	if err != nil {
+		s.logger.Error().Err(err).Msg("Failed to upload receipt to flat structure")
+		// Don't fail the entire operation, just log the error
+		s.logger.Warn().Err(err).Msg("Flat structure upload failed, but organized structure succeeded")
+	}
 
-	return relativePath, nil
+	// Return simplified relative path (without date directory structure)
+	simplePath := fmt.Sprintf("/api/v1/debts/receipts/%s%s", uuidStr, ext)
+	s.logger.Info().Str("filename", uniqueFilename).Str("relative_path", simplePath).Msg("Receipt uploaded successfully to S3")
+
+	return simplePath, nil
 }
 
 // DeleteReceipt deletes a receipt photo from S3
@@ -122,14 +142,39 @@ func (s *S3Service) DeleteReceipt(ctx context.Context, fileURL string) error {
 		return fmt.Errorf("invalid S3 URL: %w", err)
 	}
 
-	// Delete object from S3
+	// Delete object from flat structure
 	_, err = s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucketName),
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		s.logger.Error().Err(err).Str("key", key).Msg("Failed to delete receipt from S3")
-		return fmt.Errorf("failed to delete file from S3: %w", err)
+		s.logger.Error().Err(err).Str("key", key).Msg("Failed to delete receipt from flat structure")
+		return fmt.Errorf("failed to delete file from flat structure: %w", err)
+	}
+
+	// Also try to delete from organized structure if it's a flat key
+	if strings.HasPrefix(key, "receipts-flat/") {
+		// Extract filename from flat key
+		filename := strings.TrimPrefix(key, "receipts-flat/")
+		
+		// Try to delete from organized structure (we'll try common date patterns)
+		possibleDates := []string{
+			time.Now().Format("2006/01/02"),
+			time.Now().AddDate(0, 0, -1).Format("2006/01/02"),
+			time.Now().AddDate(0, 0, -7).Format("2006/01/02"),
+		}
+		
+		for _, date := range possibleDates {
+			organizedKey := fmt.Sprintf("receipts/%s/%s", date, filename)
+			_, deleteErr := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(s.bucketName),
+				Key:    aws.String(organizedKey),
+			})
+			if deleteErr == nil {
+				s.logger.Info().Str("key", organizedKey).Msg("Deleted from organized structure")
+				break
+			}
+		}
 	}
 
 	s.logger.Info().Str("key", key).Msg("Receipt deleted successfully from S3")
@@ -209,14 +254,26 @@ func (s *S3Service) IsValidImageType(contentType string) bool {
 
 // ExtractKeyFromURL extracts the S3 key from a relative path or S3 URL
 func (s *S3Service) ExtractKeyFromURL(fileURL string) (string, error) {
-	// Handle relative path format: /api/v1/receipts/receipts/2024/01/15/uuid.jpg
-	if strings.HasPrefix(fileURL, "/api/v1/receipts/") {
-		// Remove the /api/v1/receipts/ prefix to get the S3 key
-		key := strings.TrimPrefix(fileURL, "/api/v1/receipts/")
-		if key == "" {
+	// Handle simplified relative path format: /api/v1/debts/receipts/uuid.jpg
+	if strings.HasPrefix(fileURL, "/api/v1/debts/receipts/") {
+		// Remove the /api/v1/debts/receipts/ prefix to get the filename
+		filename := strings.TrimPrefix(fileURL, "/api/v1/debts/receipts/")
+		if filename == "" {
 			return "", fmt.Errorf("invalid relative path format: %s", fileURL)
 		}
-		return key, nil
+		
+		// Extract UUID and extension from filename
+		ext := filepath.Ext(filename)
+		uuidStr := strings.TrimSuffix(filename, ext)
+		
+		// Validate UUID format
+		if _, err := uuid.Parse(uuidStr); err != nil {
+			return "", fmt.Errorf("invalid UUID in filename: %s", filename)
+		}
+		
+		// Use the flat structure for API access
+		flatKey := fmt.Sprintf("receipts-flat/%s", filename)
+		return flatKey, nil
 	}
 	
 	// Handle S3 URL format: s3://bucket-name/key
