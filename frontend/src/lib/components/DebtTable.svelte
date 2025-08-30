@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import DebtDetailsModal from './DebtDetailsModal.svelte';
-	import DeleteConfirmationDialog from './DeleteConfirmationDialog.svelte';
+	import EditDebtListModal from './EditDebtListModal.svelte';
+	import DeleteDebtListModal from './DeleteDebtListModal.svelte';
 
 	type Debt = {
 		id: number;
@@ -22,6 +23,7 @@
 	let filteredDebts: Debt[] = [];
 	let selectedDebt: Debt | null = null;
 	let showDetailsModal = false;
+	let showEditModal = false;
 	let showDeleteDialog = false;
 	let debtToDelete: Debt | null = null;
 
@@ -244,8 +246,8 @@
 	}
 
 	function editDebt(debt: Debt) {
-		// TODO: Implement edit functionality
-		console.log('Edit debt:', debt);
+		selectedDebt = debt;
+		showEditModal = true;
 	}
 
 	function confirmDeleteDebt(debt: Debt) {
@@ -268,6 +270,16 @@
 			debts[index] = { ...debt, status: 'settled', remainingBalance: 0 };
 			filterAndSortDebts();
 		}
+	}
+
+	function handleDebtUpdated(event: CustomEvent) {
+		const updatedDebt = event.detail;
+		const index = debts.findIndex(d => d.id === updatedDebt.id);
+		if (index !== -1) {
+			debts[index] = updatedDebt;
+			filterAndSortDebts();
+		}
+		showEditModal = false;
 	}
 
 	$: {
@@ -576,10 +588,18 @@
 	/>
 {/if}
 
+{#if showEditModal && selectedDebt}
+	<EditDebtListModal
+		debt={selectedDebt}
+		on:close={() => { showEditModal = false; selectedDebt = null; }}
+		on:debt-updated={handleDebtUpdated}
+	/>
+{/if}
+
 {#if showDeleteDialog && debtToDelete}
-	<DeleteConfirmationDialog
-		debtName={debtToDelete.contactName}
+	<DeleteDebtListModal
+		debt={debtToDelete}
 		on:confirm={deleteDebt}
-		on:cancel={() => { showDeleteDialog = false; debtToDelete = null; }}
+		on:close={() => { showDeleteDialog = false; debtToDelete = null; }}
 	/>
 {/if}

@@ -155,7 +155,6 @@
 
 	function editDebt() {
 		dispatch('edit');
-		closeModal();
 	}
 
 	function deleteDebt() {

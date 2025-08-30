@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import ContactDetailsModal from './ContactDetailsModal.svelte';
 	import EditContactModal from './EditContactModal.svelte';
-	import DeleteConfirmationDialog from './DeleteConfirmationDialog.svelte';
+	import DeleteContactModal from './DeleteContactModal.svelte';
 
 	type Contact = {
 		id: number;
@@ -635,9 +635,9 @@
 {/if}
 
 {#if showDeleteDialog && contactToDelete}
-	<DeleteConfirmationDialog
-		debtName={contactToDelete.name}
+	<DeleteContactModal
+		contact={contactToDelete}
 		on:confirm={deleteContact}
-		on:cancel={() => { showDeleteDialog = false; contactToDelete = null; }}
+		on:close={() => { showDeleteDialog = false; contactToDelete = null; }}
 	/>
 {/if}
