@@ -26,7 +26,6 @@
 	let showEditModal = false;
 	let showDeleteDialog = false;
 	let contactToDelete: Contact | null = null;
-	let selectedContacts: Set<number> = new Set();
 
 	// Filter and search state
 	let searchQuery = '';
@@ -38,9 +37,6 @@
 	let currentPage = 1;
 	let itemsPerPage = 10;
 	let totalPages = 1;
-
-	// Bulk actions
-	let showBulkActions = false;
 
 	onMount(() => {
 		loadContacts();
@@ -172,9 +168,6 @@
 		filteredContacts = filtered;
 		totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
 		currentPage = Math.min(currentPage, totalPages || 1);
-		
-		// Update bulk actions visibility
-		showBulkActions = selectedContacts.size > 0;
 	}
 
 	function handleSort(column: string) {
@@ -245,42 +238,13 @@
 	function deleteContact() {
 		if (contactToDelete) {
 			contacts = contacts.filter(c => c.id !== contactToDelete?.id);
-			selectedContacts.delete(contactToDelete.id);
 			filterAndSortContacts();
 			contactToDelete = null;
 			showDeleteDialog = false;
 		}
 	}
 
-	function toggleContactSelection(contactId: number) {
-		if (selectedContacts.has(contactId)) {
-			selectedContacts.delete(contactId);
-		} else {
-			selectedContacts.add(contactId);
-		}
-		selectedContacts = selectedContacts; // Trigger reactivity
-		showBulkActions = selectedContacts.size > 0;
-	}
 
-	function toggleAllContacts() {
-		const pageContacts = paginatedContacts.map(c => c.id);
-		const allSelected = pageContacts.every(id => selectedContacts.has(id));
-		
-		if (allSelected) {
-			pageContacts.forEach(id => selectedContacts.delete(id));
-		} else {
-			pageContacts.forEach(id => selectedContacts.add(id));
-		}
-		selectedContacts = selectedContacts; // Trigger reactivity
-		showBulkActions = selectedContacts.size > 0;
-	}
-
-	function deleteBulkContacts() {
-		const selectedIds = Array.from(selectedContacts);
-		contacts = contacts.filter(c => !selectedIds.includes(c.id));
-		selectedContacts.clear();
-		filterAndSortContacts();
-	}
 
 	function handleContactUpdated(event: CustomEvent) {
 		const updatedContact = event.detail;
@@ -301,9 +265,6 @@
 		(currentPage - 1) * itemsPerPage,
 		currentPage * itemsPerPage
 	);
-
-	$: allPageContactsSelected = paginatedContacts.length > 0 && 
-		paginatedContacts.every(c => selectedContacts.has(c.id));
 </script>
 
 <div class="space-y-6">
@@ -329,15 +290,6 @@
 				<option value="regular">Regular Contact</option>
 				<option value="user_reference">User Reference</option>
 			</select>
-
-			{#if showBulkActions}
-				<button on:click={deleteBulkContacts} class="btn-danger">
-					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-					</svg>
-					Delete Selected ({selectedContacts.size})
-				</button>
-			{/if}
 		</div>
 	</div>
 
@@ -347,14 +299,6 @@
 			<table class="w-full">
 				<thead class="bg-muted/50 border-b border-border">
 					<tr>
-						<th class="px-6 py-3 text-left">
-							<input
-								type="checkbox"
-								checked={allPageContactsSelected}
-								on:change={toggleAllContacts}
-								class="w-4 h-4 text-primary focus:ring-primary border-input rounded"
-							/>
-						</th>
 						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer" on:click={() => handleSort('name')}>
 							Name
 							{#if sortBy === 'name'}
@@ -387,14 +331,6 @@
 				<tbody class="bg-card divide-y divide-border">
 					{#each paginatedContacts as contact (contact.id)}
 						<tr class="hover:bg-muted/30 cursor-pointer transition-colors duration-200" on:click={() => viewContact(contact)}>
-							<td class="px-6 py-4" on:click|stopPropagation>
-								<input
-									type="checkbox"
-									checked={selectedContacts.has(contact.id)}
-									on:change={() => toggleContactSelection(contact.id)}
-									class="w-4 h-4 text-primary focus:ring-primary border-input rounded"
-								/>
-							</td>
 							<td class="px-6 py-4 whitespace-nowrap">
 								<div class="flex items-center">
 									<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center mr-3">
@@ -467,11 +403,12 @@
 								{formatDate(contact.createdAt)}
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-								<div class="flex items-center space-x-2" on:click|stopPropagation>
+								<div class="flex items-center space-x-2" on:click|stopPropagation on:keydown|stopPropagation role="group">
 									<button
 										on:click={() => viewContact(contact)}
 										class="text-primary hover:text-primary/80 p-1"
 										title="View Details"
+										aria-label="View details for {contact.name}"
 									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -482,6 +419,7 @@
 										on:click={() => editContact(contact)}
 										class="text-secondary hover:text-secondary/80 p-1"
 										title="Edit"
+										aria-label="Edit {contact.name}"
 									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -491,6 +429,7 @@
 										on:click={() => confirmDeleteContact(contact)}
 										class="text-destructive hover:text-destructive/80 p-1"
 										title="Delete"
+										aria-label="Delete {contact.name}"
 									>
 										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -508,16 +447,9 @@
 	<!-- Mobile Card Layout -->
 	<div class="lg:hidden space-y-4">
 		{#each paginatedContacts as contact (contact.id)}
-			<div class="card p-4" on:click={() => viewContact(contact)}>
+			<div class="card p-4" on:click={() => viewContact(contact)} on:keydown={(e) => e.key === 'Enter' && viewContact(contact)} role="button" tabindex="0">
 				<div class="flex items-start justify-between mb-3">
 					<div class="flex items-center space-x-3">
-						<input
-							type="checkbox"
-							checked={selectedContacts.has(contact.id)}
-							on:change={() => toggleContactSelection(contact.id)}
-							on:click|stopPropagation
-							class="w-4 h-4 text-primary focus:ring-primary border-input rounded mt-1"
-						/>
 						<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
 							<span class="text-primary-foreground text-sm font-medium">
 								{contact.name.split(' ').map(n => n[0]).join('')}
@@ -564,7 +496,7 @@
 					</div>
 				{/if}
 
-				<div class="flex justify-end space-x-2" on:click|stopPropagation>
+				<div class="flex justify-end space-x-2" on:click|stopPropagation on:keydown|stopPropagation role="group">
 					<button on:click={() => viewContact(contact)} class="btn-secondary text-xs px-3 py-1">View</button>
 					<button on:click={() => editContact(contact)} class="btn-secondary text-xs px-3 py-1">Edit</button>
 				</div>
@@ -621,8 +553,8 @@
 	<ContactDetailsModal
 		contact={selectedContact}
 		on:close={() => { showDetailsModal = false; selectedContact = null; }}
-		on:edit={() => { showDetailsModal = false; editContact(selectedContact); }}
-		on:delete={() => { showDetailsModal = false; confirmDeleteContact(selectedContact); }}
+		on:edit={() => { showDetailsModal = false; if (selectedContact) editContact(selectedContact); }}
+		on:delete={() => { showDetailsModal = false; if (selectedContact) confirmDeleteContact(selectedContact); }}
 	/>
 {/if}
 
