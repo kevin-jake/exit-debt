@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import ReceiptPhotoViewer from './ReceiptPhotoViewer.svelte';
 
 	export let debt: any;
 
@@ -12,6 +13,7 @@
 		method: 'cash' | 'bank_transfer' | 'check' | 'digital_wallet' | 'other';
 		status: 'completed' | 'pending' | 'failed' | 'refunded';
 		description?: string;
+		receiptPhotoURL?: string;
 	};
 
 	let payments: Payment[] = [];
@@ -19,8 +21,13 @@
 	let newPayment = {
 		amount: 0,
 		method: 'cash' as const,
-		description: ''
+		description: '',
+		receiptPhoto: undefined as File | undefined
 	};
+
+	// Receipt photo viewer state
+	let showReceiptViewer = false;
+	let selectedReceiptPhoto = '';
 
 	onMount(() => {
 		loadPayments();
@@ -40,7 +47,8 @@
 				amount: 500.00,
 				method: 'bank_transfer',
 				status: 'completed',
-				description: 'First installment payment'
+				description: 'First installment payment',
+				receiptPhotoURL: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop'
 			},
 			{
 				id: 2,
@@ -109,6 +117,40 @@
 		return methods[method as keyof typeof methods] || method;
 	}
 
+	// File validation
+	function validateFile(file: File): string | null {
+		const maxSize = 5 * 1024 * 1024; // 5MB
+		const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+		
+		if (file.size > maxSize) return 'File size must be less than 5MB';
+		if (!allowedTypes.includes(file.type)) return 'Only image files are allowed';
+		return null;
+	}
+
+	function handleFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		if (target.files && target.files[0]) {
+			const file = target.files[0];
+			const error = validateFile(file);
+			
+			if (error) {
+				alert(error);
+				return;
+			}
+			
+			newPayment.receiptPhoto = file;
+		}
+	}
+
+	function removeReceiptPhoto() {
+		newPayment.receiptPhoto = undefined;
+	}
+
+	function viewReceiptPhoto(photoURL: string) {
+		selectedReceiptPhoto = photoURL;
+		showReceiptViewer = true;
+	}
+
 	function getInstallmentText(plan: string): string {
 		const plans = {
 			'one_time': 'One-time',
@@ -129,21 +171,31 @@
 
 	function handleAddPayment() {
 		if (newPayment.amount > 0) {
+			// Create receipt photo URL if photo was uploaded
+			let receiptPhotoURL: string | undefined;
+			if (newPayment.receiptPhoto) {
+				// In a real app, this would upload to server and return URL
+				// For now, create a mock URL
+				receiptPhotoURL = 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop';
+			}
+
 			const payment: Payment = {
 				id: payments.length + 1,
 				date: new Date().toISOString().split('T')[0],
 				amount: newPayment.amount,
 				method: newPayment.method,
 				status: 'completed',
-				description: newPayment.description
+				description: newPayment.description,
+				receiptPhotoURL
 			};
 			payments = [payment, ...payments];
 			
 			// Reset form
 			newPayment = {
 				amount: 0,
-				method: 'cash',
-				description: ''
+				method: 'cash' as const,
+				description: '',
+				receiptPhoto: undefined
 			};
 			showPaymentForm = false;
 		}
@@ -347,6 +399,50 @@
 									/>
 								</div>
 							</div>
+
+							<!-- Receipt Photo Upload -->
+							<div class="mt-4">
+								<label class="label">Receipt Photo (Optional)</label>
+								<div class="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary/50 transition-colors">
+									{#if newPayment.receiptPhoto}
+										<!-- Photo preview -->
+										<div class="relative inline-block">
+											<img 
+												src={URL.createObjectURL(newPayment.receiptPhoto)} 
+												alt="Receipt preview" 
+												class="w-24 h-24 object-cover rounded-lg"
+											/>
+											<button 
+												type="button"
+												on:click={removeReceiptPhoto}
+												class="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-destructive/90"
+											>
+												×
+											</button>
+										</div>
+									{:else}
+										<!-- Upload prompt -->
+										<div class="space-y-2">
+											<input 
+												type="file" 
+												accept="image/*" 
+												on:change={handleFileSelect}
+												class="hidden" 
+												id="receipt-upload"
+											/>
+											<label 
+												for="receipt-upload" 
+												class="cursor-pointer text-primary hover:text-primary/80"
+											>
+												Click to upload or drag and drop
+											</label>
+											<p class="text-xs text-muted-foreground">
+												JPG, PNG, GIF, WebP up to 5MB
+											</p>
+										</div>
+									{/if}
+								</div>
+							</div>
 							<div class="flex justify-end space-x-3 mt-4">
 								<button on:click={() => showPaymentForm = false} class="btn-secondary">
 									Cancel
@@ -370,6 +466,7 @@
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Method</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
+											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt</th>
 										</tr>
 									</thead>
 									<tbody class="bg-card divide-y divide-border">
@@ -384,6 +481,27 @@
 													</span>
 												</td>
 												<td class="px-4 py-3 text-sm text-muted-foreground">{payment.description || 'N/A'}</td>
+												<td class="px-4 py-3">
+													{#if payment.receiptPhotoURL}
+														<button 
+															on:click={() => viewReceiptPhoto(payment.receiptPhotoURL!)}
+															class="w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors"
+															title="View receipt"
+														>
+															<img 
+																src={payment.receiptPhotoURL} 
+																alt="Receipt" 
+																class="w-full h-full object-cover"
+															/>
+														</button>
+													{:else}
+														<div class="w-16 h-16 rounded-lg border border-border flex items-center justify-center text-muted-foreground">
+															<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+															</svg>
+														</div>
+													{/if}
+												</td>
 											</tr>
 										{/each}
 									</tbody>
@@ -428,3 +546,10 @@
 		</div>
 	</div>
 </div>
+
+<!-- Receipt Photo Viewer -->
+<ReceiptPhotoViewer
+	photoUrl={selectedReceiptPhoto}
+	isOpen={showReceiptViewer}
+	on:close={() => { showReceiptViewer = false; selectedReceiptPhoto = ''; }}
+/>
