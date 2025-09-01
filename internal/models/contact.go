@@ -10,7 +10,7 @@ type Contact struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 	Name        string    `json:"name" gorm:"not null;index"`
 	Email       *string   `json:"email" gorm:"index"`
-	Phone       *string   `json:"phone"`
+	Phone       *string   `json:"phone" gorm:"uniqueIndex"`
 	Notes       *string   `json:"notes"`
 	IsUser      bool      `json:"is_user" gorm:"default:false;index"`
 	UserIDRef   *uuid.UUID `json:"user_id_ref" gorm:"type:uuid;index"`

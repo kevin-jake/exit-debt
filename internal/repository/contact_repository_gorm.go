@@ -58,6 +58,17 @@ func (r *contactRepositoryGORM) GetByEmail(ctx context.Context, email string) (*
 	return r.gormToEntity(&gormContact), nil
 }
 
+func (r *contactRepositoryGORM) GetByPhone(ctx context.Context, phone string) (*entities.Contact, error) {
+	var gormContact models.Contact
+	if err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&gormContact).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, entities.ErrContactNotFound
+		}
+		return nil, fmt.Errorf("failed to get contact by phone: %w", err)
+	}
+	return r.gormToEntity(&gormContact), nil
+}
+
 func (r *contactRepositoryGORM) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
 	var userContacts []models.UserContact
 	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ?", userID).Order("\"Contact\".\"name\" ASC").Find(&userContacts).Error; err != nil {
@@ -131,6 +142,14 @@ func (r *contactRepositoryGORM) ExistsByEmailForUser(ctx context.Context, userID
 	var count int64
 	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ? AND \"Contact\".\"email\" = ?", userID, email).Model(&models.UserContact{}).Count(&count).Error; err != nil {
 		return false, fmt.Errorf("failed to check if contact exists by email for user: %w", err)
+	}
+	return count > 0, nil
+}
+
+func (r *contactRepositoryGORM) ExistsByPhoneForUser(ctx context.Context, userID uuid.UUID, phone string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ? AND \"Contact\".\"phone\" = ?", userID, phone).Model(&models.UserContact{}).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check if contact exists by phone for user: %w", err)
 	}
 	return count > 0, nil
 }

@@ -39,8 +39,10 @@ func TestContactService_CreateContact(t *testing.T) {
 			},
 			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
 				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "alice@example.com").Return(false, nil)
+				contactRepo.On("ExistsByPhoneForUser", mock.Anything, userID, "+1987654321").Return(false, nil)
 				userRepo.On("GetByEmail", mock.Anything, "alice@example.com").Return(nil, entities.ErrUserNotFound)
 				contactRepo.On("GetByEmail", mock.Anything, "alice@example.com").Return(nil, entities.ErrContactNotFound)
+				contactRepo.On("GetByPhone", mock.Anything, "+1987654321").Return(nil, entities.ErrContactNotFound)
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
@@ -107,6 +109,19 @@ func TestContactService_CreateContact(t *testing.T) {
 				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "existing@example.com").Return(true, nil)
 			},
 			expectedError: entities.ErrContactAlreadyExists,
+			expectSuccess: false,
+		},
+		{
+			name:   "contact with phone number already exists for user",
+			userID: userID,
+			request: &entities.CreateContactRequest{
+				Name:  "Phone Contact",
+				Phone: stringPtr("+1234567890"),
+			},
+			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
+				contactRepo.On("ExistsByPhoneForUser", mock.Anything, userID, "+1234567890").Return(true, nil)
+			},
+			expectedError: entities.ErrContactPhoneExists,
 			expectSuccess: false,
 		},
 		{
@@ -499,3 +514,4 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 		})
 	}
 }
+

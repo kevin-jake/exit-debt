@@ -35,6 +35,14 @@ func (m *MockContactRepository) GetByEmail(ctx context.Context, email string) (*
 	return args.Get(0).(*entities.Contact), args.Error(1)
 }
 
+func (m *MockContactRepository) GetByPhone(ctx context.Context, phone string) (*entities.Contact, error) {
+	args := m.Called(ctx, phone)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entities.Contact), args.Error(1)
+}
+
 func (m *MockContactRepository) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
@@ -55,6 +63,11 @@ func (m *MockContactRepository) Delete(ctx context.Context, id uuid.UUID) error 
 
 func (m *MockContactRepository) ExistsByEmailForUser(ctx context.Context, userID uuid.UUID, email string) (bool, error) {
 	args := m.Called(ctx, userID, email)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *MockContactRepository) ExistsByPhoneForUser(ctx context.Context, userID uuid.UUID, phone string) (bool, error) {
+	args := m.Called(ctx, userID, phone)
 	return args.Bool(0), args.Error(1)
 }
 

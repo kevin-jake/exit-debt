@@ -32,7 +32,7 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Check if contact with same name already exists for this user
+	// Check if contact with same email already exists for this user
 	if req.Email != nil {
 		exists, err := s.contactRepo.ExistsByEmailForUser(ctx, userID, *req.Email)
 		if err != nil {
@@ -40,6 +40,17 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		}
 		if exists {
 			return nil, entities.ErrContactAlreadyExists
+		}
+	}
+
+	// Check if contact with same phone number already exists for this user
+	if req.Phone != nil {
+		exists, err := s.contactRepo.ExistsByPhoneForUser(ctx, userID, *req.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if contact exists: %w", err)
+		}
+		if exists {
+			return nil, entities.ErrContactPhoneExists
 		}
 	}
 
@@ -56,11 +67,20 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		}
 	}
 
-	// Create or find existing contact
+	// Try to find existing contact by email first
 	var contact *entities.Contact
 	if req.Email != nil {
-		// Try to find existing contact with same email
 		existingContact, err := s.contactRepo.GetByEmail(ctx, *req.Email)
+		if err == nil {
+			contact = existingContact
+		} else if err != entities.ErrContactNotFound {
+			return nil, fmt.Errorf("failed to get existing contact: %w", err)
+		}
+	}
+
+	// If no contact found by email, try to find by phone
+	if contact == nil && req.Phone != nil {
+		existingContact, err := s.contactRepo.GetByPhone(ctx, *req.Phone)
 		if err == nil {
 			contact = existingContact
 		} else if err != entities.ErrContactNotFound {
@@ -89,6 +109,33 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 
 		if err := s.contactRepo.Create(ctx, contact); err != nil {
 			return nil, fmt.Errorf("failed to create contact: %w", err)
+		}
+	} else {
+		// Update existing contact with new information if provided
+		updated := false
+		if req.Name != "" && contact.Name != req.Name {
+			contact.Name = req.Name
+			updated = true
+		}
+		if req.Phone != nil && (contact.Phone == nil || *contact.Phone != *req.Phone) {
+			contact.Phone = req.Phone
+			updated = true
+		}
+		if req.Notes != nil && (contact.Notes == nil || *contact.Notes != *req.Notes) {
+			contact.Notes = req.Notes
+			updated = true
+		}
+		if isUser && !contact.IsUser {
+			contact.IsUser = true
+			contact.UserIDRef = userIDRef
+			updated = true
+		}
+		
+		if updated {
+			contact.UpdatedAt = time.Now()
+			if err := s.contactRepo.Update(ctx, contact); err != nil {
+				return nil, fmt.Errorf("failed to update existing contact: %w", err)
+			}
 		}
 	}
 

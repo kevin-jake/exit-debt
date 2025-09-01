@@ -13,6 +13,7 @@ type ContactRepository interface {
 	Create(ctx context.Context, contact *entities.Contact) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.Contact, error)
 	GetByEmail(ctx context.Context, email string) (*entities.Contact, error)
+	GetByPhone(ctx context.Context, phone string) (*entities.Contact, error)
 	GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error)
 	Update(ctx context.Context, contact *entities.Contact) error
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -20,6 +21,7 @@ type ContactRepository interface {
 	CreateUserContactRelation(ctx context.Context, userContact *entities.UserContact) error
 	DeleteUserContactRelation(ctx context.Context, userID, contactID uuid.UUID) error
 	ExistsByEmailForUser(ctx context.Context, userID uuid.UUID, email string) (bool, error)
+	ExistsByPhoneForUser(ctx context.Context, userID uuid.UUID, phone string) (bool, error)
 	GetContactsWithEmail(ctx context.Context, email string) ([]entities.Contact, error)
 	GetUserContactRelationsByContactID(ctx context.Context, contactID uuid.UUID) ([]entities.UserContact, error)
 }

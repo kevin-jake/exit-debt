@@ -16,6 +16,7 @@ var (
 	// Contact errors
 	ErrContactNotFound     = errors.New("contact not found")
 	ErrContactAlreadyExists = errors.New("contact already exists")
+	ErrContactPhoneExists   = errors.New("contact with this phone number already exists")
 	ErrInvalidContactName  = errors.New("contact name is required")
 
 	// Debt errors

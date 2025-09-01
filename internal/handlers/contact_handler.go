@@ -82,6 +82,8 @@ func (h *ContactHandler) CreateContact(c *gin.Context) {
 		switch err {
 		case entities.ErrContactAlreadyExists:
 			c.JSON(http.StatusConflict, NewErrorResponse("Contact already exists", "", requestID))
+		case entities.ErrContactPhoneExists:
+			c.JSON(http.StatusConflict, NewErrorResponse("Contact with this phone number already exists", "", requestID))
 		case entities.ErrInvalidContactName:
 			c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid input", err.Error(), requestID))
 		default:
