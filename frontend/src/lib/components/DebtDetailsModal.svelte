@@ -11,7 +11,7 @@
 		date: string;
 		amount: number;
 		method: 'cash' | 'bank_transfer' | 'check' | 'digital_wallet' | 'other';
-		status: 'completed' | 'pending' | 'failed' | 'refunded';
+		status: 'completed' | 'pending' | 'failed' | 'refunded' | 'rejected';
 		description?: string;
 		receiptPhotoURL?: string;
 	};
@@ -101,6 +101,8 @@
 				return 'bg-destructive/10 text-destructive';
 			case 'refunded':
 				return 'bg-muted/50 text-muted-foreground';
+			case 'rejected':
+				return 'bg-destructive/10 text-destructive';
 			default:
 				return 'bg-muted/50 text-muted-foreground';
 		}
@@ -199,6 +201,22 @@
 			};
 			showPaymentForm = false;
 		}
+	}
+
+	function verifyPayment(paymentId: number) {
+		// Find the payment and update its status
+		payments = payments.map(payment => {
+			if (payment.id === paymentId) {
+				return {
+					...payment,
+					status: 'completed' as const
+				};
+			}
+			return payment;
+		});
+		
+		// In a real app, this would make an API call to verify the payment
+		console.log(`Payment ${paymentId} verified`);
 	}
 
 	function closeModal() {
@@ -467,6 +485,9 @@
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt</th>
+											{#if debt.type === 'owed_to_me'}
+												<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+											{/if}
 										</tr>
 									</thead>
 									<tbody class="bg-card divide-y divide-border">
@@ -502,6 +523,29 @@
 														</div>
 													{/if}
 												</td>
+												{#if debt.type === 'owed_to_me'}
+													<td class="px-4 py-3">
+														{#if payment.status !== 'completed'}
+															<button 
+																on:click={() => verifyPayment(payment.id)}
+																class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+																title={payment.status === 'rejected' ? 'Reverify payment' : 'Verify payment'}
+															>
+																<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+																</svg>
+																{payment.status === 'rejected' ? 'Reverify' : 'Verify'}
+															</button>
+														{:else}
+															<span class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-green-100 text-green-700">
+																<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+																</svg>
+																Verified
+															</span>
+														{/if}
+													</td>
+												{/if}
 											</tr>
 										{/each}
 									</tbody>
