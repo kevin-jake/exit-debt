@@ -75,7 +75,6 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 			Name:       req.Name,
 			Email:      req.Email,
 			Phone:      req.Phone,
-			FacebookID: req.FacebookID,
 			Notes:      req.Notes,
 			IsUser:     isUser,
 			UserIDRef:  userIDRef,
@@ -187,9 +186,6 @@ func (s *contactService) UpdateContact(ctx context.Context, id uuid.UUID, userID
 	}
 	if req.Phone != nil {
 		contact.Phone = req.Phone
-	}
-	if req.FacebookID != nil {
-		contact.FacebookID = req.FacebookID
 	}
 	if req.Notes != nil {
 		contact.Notes = req.Notes

@@ -7,7 +7,6 @@
 		name: '',
 		email: '',
 		phone: '',
-		facebookId: '',
 		notes: ''
 	};
 
@@ -58,7 +57,6 @@
 				name: formData.name.trim(),
 				email: formData.email.trim() || null,
 				phone: formData.phone.trim() || null,
-				facebookId: formData.facebookId.trim() || null,
 				notes: formData.notes.trim() || null,
 				createdAt: new Date().toISOString()
 			};
@@ -105,10 +103,9 @@
 
 		<!-- Form -->
 		<form on:submit|preventDefault={handleSubmit} class="p-6 space-y-4">
-			<!-- General Error -->
 			{#if errors.general}
-				<div class="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
-					{errors.general}
+				<div class="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+					<p class="text-sm text-destructive">{errors.general}</p>
 				</div>
 			{/if}
 
@@ -159,19 +156,6 @@
 				{#if errors.phone}
 					<p class="mt-1 text-sm text-destructive">{errors.phone}</p>
 				{/if}
-			</div>
-
-			<!-- Facebook ID Field -->
-			<div>
-				<label for="contact-facebook" class="label">Facebook ID</label>
-				<input
-					id="contact-facebook"
-					type="text"
-					bind:value={formData.facebookId}
-					class="input"
-					placeholder="Enter Facebook ID or username"
-					disabled={isLoading}
-				/>
 			</div>
 
 			<!-- Notes Field -->

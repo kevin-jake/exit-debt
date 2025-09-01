@@ -111,7 +111,6 @@ func (r *debtListRepositoryGORM) GetDebtListsWhereUserIsContact(ctx context.Cont
 			Name:       gormDebtList.User.FirstName + " " + gormDebtList.User.LastName,
 			Email:      &gormDebtList.User.Email,
 			Phone:      gormDebtList.User.Phone,
-			FacebookID: nil, // User doesn't have FacebookID
 			Notes:      nil, // User doesn't have Notes
 			IsUser:     true,
 			UserIDRef:  &gormDebtList.User.ID,
@@ -283,7 +282,6 @@ func (r *debtListRepositoryGORM) gormToResponseEntity(gormDebtList *models.DebtL
 		Name:       gormDebtList.Contact.Name,
 		Email:      gormDebtList.Contact.Email,
 		Phone:      gormDebtList.Contact.Phone,
-		FacebookID: gormDebtList.Contact.FacebookID,
 		Notes:      gormDebtList.Contact.Notes,
 		IsUser:     gormDebtList.Contact.IsUser,
 		UserIDRef:  gormDebtList.Contact.UserIDRef,

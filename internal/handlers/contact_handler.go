@@ -67,10 +67,6 @@ func (h *ContactHandler) CreateContact(c *gin.Context) {
 		sanitized := sanitizeString(*req.Phone)
 		req.Phone = &sanitized
 	}
-	if req.FacebookID != nil {
-		sanitized := sanitizeString(*req.FacebookID)
-		req.FacebookID = &sanitized
-	}
 	if req.Notes != nil {
 		sanitized := sanitizeString(*req.Notes)
 		req.Notes = &sanitized
@@ -240,10 +236,6 @@ func (h *ContactHandler) UpdateContact(c *gin.Context) {
 	if req.Phone != nil {
 		sanitized := sanitizeString(*req.Phone)
 		req.Phone = &sanitized
-	}
-	if req.FacebookID != nil {
-		sanitized := sanitizeString(*req.FacebookID)
-		req.FacebookID = &sanitized
 	}
 	if req.Notes != nil {
 		sanitized := sanitizeString(*req.Notes)

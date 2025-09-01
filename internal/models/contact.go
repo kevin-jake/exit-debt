@@ -11,7 +11,6 @@ type Contact struct {
 	Name        string    `json:"name" gorm:"not null;index"`
 	Email       *string   `json:"email" gorm:"index"`
 	Phone       *string   `json:"phone"`
-	FacebookID  *string   `json:"facebook_id"`
 	Notes       *string   `json:"notes"`
 	IsUser      bool      `json:"is_user" gorm:"default:false;index"`
 	UserIDRef   *uuid.UUID `json:"user_id_ref" gorm:"type:uuid;index"`
@@ -38,17 +37,15 @@ type UserContact struct {
 }
 
 type CreateContactRequest struct {
-	Name       string  `json:"name" binding:"required"`
-	Email      *string `json:"email"`
-	Phone      *string `json:"phone"`
-	FacebookID *string `json:"facebook_id"`
-	Notes      *string `json:"notes"`
+	Name  string  `json:"name" binding:"required"`
+	Email *string `json:"email"`
+	Phone *string `json:"phone"`
+	Notes *string `json:"notes"`
 }
 
 type UpdateContactRequest struct {
-	Name       *string `json:"name"`
-	Email      *string `json:"email"`
-	Phone      *string `json:"phone"`
-	FacebookID *string `json:"facebook_id"`
-	Notes      *string `json:"notes"`
+	Name  *string `json:"name"`
+	Email *string `json:"email"`
+	Phone *string `json:"phone"`
+	Notes *string `json:"notes"`
 } 

@@ -9,7 +9,6 @@
 		name: string;
 		email: string | null;
 		phone: string | null;
-		facebookId: string | null;
 		notes: string | null;
 		type: 'regular' | 'user_reference';
 		createdAt: string;
@@ -50,7 +49,6 @@
 				name: 'Alice Johnson',
 				email: 'alice@example.com',
 				phone: '+63 917 123 4567',
-				facebookId: 'alice.johnson',
 				notes: 'Close friend from college',
 				type: 'regular',
 				createdAt: '2023-12-01T10:00:00Z',
@@ -64,7 +62,6 @@
 				name: 'Bob Smith',
 				email: 'bob.smith@example.com',
 				phone: '+63 917 234 5678',
-				facebookId: null,
 				notes: 'Business partner',
 				type: 'user_reference',
 				createdAt: '2023-11-15T09:00:00Z',
@@ -78,7 +75,6 @@
 				name: 'Carol Davis',
 				email: 'carol.davis@example.com',
 				phone: null,
-				facebookId: 'carol.davis.5',
 				notes: null,
 				type: 'regular',
 				createdAt: '2023-10-20T11:30:00Z',
@@ -92,7 +88,6 @@
 				name: 'David Wilson',
 				email: null,
 				phone: '+63 917 345 6789',
-				facebookId: null,
 				notes: 'Neighbor',
 				type: 'regular',
 				createdAt: '2024-01-01T08:00:00Z',
@@ -106,7 +101,6 @@
 				name: 'Emma Brown',
 				email: 'emma.brown@example.com',
 				phone: '+63 917 456 7890',
-				facebookId: 'emma.brown',
 				notes: 'Family friend, very reliable',
 				type: 'regular',
 				createdAt: '2023-09-15T13:00:00Z',
@@ -129,7 +123,6 @@
 				contact.name.toLowerCase().includes(query) ||
 				contact.email?.toLowerCase().includes(query) ||
 				contact.phone?.includes(query) ||
-				contact.facebookId?.toLowerCase().includes(query) ||
 				contact.notes?.toLowerCase().includes(query)
 			);
 		}
@@ -364,15 +357,7 @@
 											<span class="text-muted-foreground">{contact.phone}</span>
 										</div>
 									{/if}
-									{#if contact.facebookId}
-										<div class="flex items-center space-x-2">
-											<svg class="w-4 h-4 text-muted-foreground" fill="currentColor" viewBox="0 0 24 24">
-												<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-											</svg>
-											<span class="text-muted-foreground">{contact.facebookId}</span>
-										</div>
-									{/if}
-									{#if !contact.email && !contact.phone && !contact.facebookId}
+									{#if !contact.email && !contact.phone}
 										<span class="text-muted-foreground/60">No contact info</span>
 									{/if}
 								</div>

@@ -12,7 +12,6 @@ type Contact struct {
 	Name       string
 	Email      *string
 	Phone      *string
-	FacebookID *string
 	Notes      *string
 	IsUser     bool
 	UserIDRef  *uuid.UUID
@@ -31,20 +30,18 @@ type UserContact struct {
 
 // CreateContactRequest represents a request to create a new contact
 type CreateContactRequest struct {
-	Name       string  `json:"name" validate:"required"`
-	Email      *string `json:"email" validate:"omitempty,email"`
-	Phone      *string `json:"phone"`
-	FacebookID *string `json:"facebook_id"`
-	Notes      *string `json:"notes"`
+	Name  string  `json:"name" validate:"required"`
+	Email *string `json:"email" validate:"omitempty,email"`
+	Phone *string `json:"phone"`
+	Notes *string `json:"notes"`
 }
 
 // UpdateContactRequest represents a request to update a contact
 type UpdateContactRequest struct {
-	Name       *string `json:"name"`
-	Email      *string `json:"email" validate:"omitempty,email"`
-	Phone      *string `json:"phone"`
-	FacebookID *string `json:"facebook_id"`
-	Notes      *string `json:"notes"`
+	Name  *string `json:"name"`
+	Email *string `json:"email" validate:"omitempty,email"`
+	Phone *string `json:"phone"`
+	Notes *string `json:"notes"`
 }
 
 // IsValid validates the contact entity

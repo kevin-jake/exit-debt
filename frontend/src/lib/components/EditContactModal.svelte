@@ -9,7 +9,6 @@
 		name: contact.name,
 		email: contact.email || '',
 		phone: contact.phone || '',
-		facebookId: contact.facebookId || '',
 		notes: contact.notes || ''
 	};
 
@@ -66,7 +65,6 @@
 				name: formData.name.trim(),
 				email: formData.email.trim() || null,
 				phone: formData.phone.trim() || null,
-				facebookId: formData.facebookId.trim() || null,
 				notes: formData.notes.trim() || null,
 				updatedAt: new Date().toISOString()
 			};
@@ -110,7 +108,7 @@
 	>
 		<!-- Header -->
 		<div class="px-6 py-4 border-b border-border flex items-center justify-between">
-			<h2 class="text-xl font-semibold text-foreground">Edit Contact: {contact.name}</h2>
+			<h2 class="text-xl font-semibold text-foreground">Edit Contact</h2>
 			<button on:click={handleClose} class="text-muted-foreground hover:text-foreground">
 				<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -120,20 +118,9 @@
 
 		<!-- Form -->
 		<form on:submit|preventDefault={handleSubmit} class="p-6 space-y-4">
-			<!-- General Error -->
 			{#if errors.general}
-				<div class="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
-					{errors.general}
-				</div>
-			{/if}
-
-			<!-- Change Indicator -->
-			{#if hasChanges}
-				<div class="bg-warning/10 border border-warning/20 text-warning px-4 py-3 rounded-lg text-sm flex items-center">
-					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-					</svg>
-					You have unsaved changes
+				<div class="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+					<p class="text-sm text-destructive">{errors.general}</p>
 				</div>
 			{/if}
 
@@ -184,19 +171,6 @@
 				{#if errors.phone}
 					<p class="mt-1 text-sm text-destructive">{errors.phone}</p>
 				{/if}
-			</div>
-
-			<!-- Facebook ID Field -->
-			<div>
-				<label for="contact-facebook" class="label">Facebook ID</label>
-				<input
-					id="contact-facebook"
-					type="text"
-					bind:value={formData.facebookId}
-					class="input {formData.facebookId !== originalData.facebookId ? 'border-warning' : ''}"
-					placeholder="Enter Facebook ID or username"
-					disabled={isLoading}
-				/>
 			</div>
 
 			<!-- Notes Field -->

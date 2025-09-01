@@ -12,7 +12,6 @@ type Notification struct {
 	NotificationType     string    `json:"notification_type" db:"notification_type"`
 	RecipientEmail       *string   `json:"recipient_email" db:"recipient_email"`
 	RecipientPhone       *string   `json:"recipient_phone" db:"recipient_phone"`
-	RecipientFacebookID  *string   `json:"recipient_facebook_id" db:"recipient_facebook_id"`
 	Message              string    `json:"message" db:"message"`
 	Status               string    `json:"status" db:"status"`
 	SentAt               *time.Time `json:"sent_at" db:"sent_at"`
@@ -21,9 +20,8 @@ type Notification struct {
 
 type CreateNotificationRequest struct {
 	DebtItemID           uuid.UUID `json:"debt_item_id" binding:"required"`
-	NotificationType     string    `json:"notification_type" binding:"required,oneof=email sms facebook"`
+	NotificationType     string    `json:"notification_type" binding:"required,oneof=email sms"`
 	RecipientEmail       *string   `json:"recipient_email"`
 	RecipientPhone       *string   `json:"recipient_phone"`
-	RecipientFacebookID  *string   `json:"recipient_facebook_id"`
 	Message              string    `json:"message" binding:"required"`
 } 
