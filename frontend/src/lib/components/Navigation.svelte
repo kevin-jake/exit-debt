@@ -14,7 +14,6 @@
 		{ href: '/', label: 'Dashboard', icon: 'dashboard' },
 		{ href: '/debts', label: 'Debts', icon: 'money' },
 		{ href: '/contacts', label: 'Contacts', icon: 'people' },
-		{ href: '/analytics', label: 'Analytics', icon: 'chart' },
 		{ href: '/settings', label: 'Settings', icon: 'settings' }
 	];
 

@@ -29,6 +29,8 @@
 	let showReceiptViewer = false;
 	let selectedReceiptPhoto = '';
 
+	console.log(debt);
+
 	onMount(() => {
 		loadPayments();
 		// Prevent body scroll when modal is open
