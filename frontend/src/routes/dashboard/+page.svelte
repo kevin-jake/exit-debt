@@ -344,7 +344,7 @@
 		<div class="card p-6 mt-8">
 			<h2 class="text-xl font-semibold text-foreground mb-4">Quick Actions</h2>
 	
-			<div class="grid grid-cols-4 md:grid-cols-2 gap-4">
+			<div class="grid grid-cols-2 gap-4">
 				<a href="/debts/new" class="btn-primary text-center">
 					<svg class="w-5 h-5 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

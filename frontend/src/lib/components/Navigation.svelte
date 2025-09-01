@@ -3,6 +3,11 @@
 	import { goto } from '$app/navigation';
 	import { themeStore } from '$lib/stores/theme.svelte';
 	import { cn } from '$lib/utils';
+	import { createEventDispatcher } from 'svelte';
+
+	export let mobile = false;
+
+	const dispatch = createEventDispatcher();
 
 	type NavItem = {
 		href: string;
@@ -17,24 +22,38 @@
 		{ href: '/settings', label: 'Settings', icon: 'settings' }
 	];
 
-	function isActive(href: string): boolean {
+	$: isActive = (href: string): boolean => {
+		// Special case for dashboard: both "/" and "/dashboard" should highlight the dashboard nav item
+		if (href === '/') {
+			return $page.url.pathname === '/' || $page.url.pathname === '/dashboard';
+		}
 		return $page.url.pathname === href;
-	}
+	};
 
 	function handleLogout() {
 		// TODO: Implement logout logic
 		goto('/login');
 	}
 
-	function handleThemeToggle() {
+	$: handleThemeToggle = () => {
 		themeStore.toggle();
+	};
+
+	function handleNavigation(href: string) {
+		if (mobile) {
+			dispatch('navigate');
+		}
+		goto(href);
 	}
 </script>
 
-<nav class="bg-card border-r border-border w-64 h-screen fixed left-0 top-0 z-40">
+<nav class={cn(
+	"bg-card border-r border-border w-64 h-screen z-40",
+	mobile ? "fixed left-0 top-0" : "fixed left-0 top-0"
+)}>
 	<div class="p-6">
-		<!-- Logo -->
-		<div class="flex items-center space-x-3 mb-8">
+		<!-- Logo (hide on mobile since it's in the header) -->
+		<div class="flex items-center space-x-3 mb-8" class:hidden={mobile}>
 			<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
 				<svg class="w-5 h-5 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
@@ -43,13 +62,18 @@
 			<h1 class="text-xl font-bold text-card-foreground">DebtTracker</h1>
 		</div>
 
+		<!-- Mobile Header Spacing -->
+		{#if mobile}
+			<div class="mb-8"></div>
+		{/if}
+
 		<!-- Theme Toggle -->
 		<div class="mb-6">
 			<button
 				on:click={handleThemeToggle}
 				class="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors duration-200"
 			>
-				{#if themeStore.theme === 'dark'}
+				{#if $themeStore === 'dark'}
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
 					</svg>
@@ -67,10 +91,10 @@
 		<ul class="space-y-2">
 			{#each navItems as item (item.href)}
 				<li>
-					<a
-						href={item.href}
+					<button
+						on:click={() => handleNavigation(item.href)}
 						class={cn(
-							"flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200",
+							"flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 w-full text-left",
 							isActive(item.href)
 								? 'bg-primary text-primary-foreground'
 								: 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground'
@@ -100,7 +124,7 @@
 							</svg>
 						{/if}
 						<span>{item.label}</span>
-					</a>
+					</button>
 				</li>
 			{/each}
 		</ul>
