@@ -94,6 +94,10 @@
     @apply btn border border-input bg-background hover:bg-accent hover:text-accent-foreground focus:ring-ring;
   }
 
+  .btn-destructive {
+    @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive shadow-sm;
+  }
+
   .card {
     @apply bg-card text-card-foreground rounded-[--radius] shadow-soft border border-border;
   }
@@ -104,6 +108,12 @@
 
   .label {
     @apply block text-sm font-medium text-foreground mb-1;
+  }
+
+  .shadow-soft {
+    box-shadow:
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06);
   }
 }
 
