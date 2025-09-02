@@ -174,7 +174,7 @@
 			filterAndSortContacts();
 		}
 		showEditModal = false;
-		notificationsStore.success('Contact Updated', `Successfully updated ${updatedContact.name}`);
+		// Note: Success notification is already shown by EditContactModal
 	}
 
 	$: {
@@ -184,15 +184,19 @@
 
 	// Watch for changes in the contacts store and refresh the table
 	$: if ($contactsStore.contacts.length > 0) {
-		contacts = $contactsStore.contacts
-			.filter(contact => contact.id) // Filter out contacts without IDs
-			.map(contact => ({
-				...contact,
-				debtCount: 0, // TODO: Get from API when available
-				totalOwed: 0, // TODO: Get from API when available
-				totalOwing: 0 // TODO: Get from API when available
-			}));
-		filterAndSortContacts();
+		// Only update if the store has more contacts than our local array
+		// or if we don't have any contacts yet
+		if (contacts.length === 0 || $contactsStore.contacts.length !== contacts.length) {
+			contacts = $contactsStore.contacts
+				.filter(contact => contact.id) // Filter out contacts without IDs
+				.map(contact => ({
+					...contact,
+					debtCount: 0, // TODO: Get from API when available
+					totalOwed: 0, // TODO: Get from API when available
+					totalOwing: 0 // TODO: Get from API when available
+				}));
+			filterAndSortContacts();
+		}
 	}
 
 	$: paginatedContacts = filteredContacts.slice(

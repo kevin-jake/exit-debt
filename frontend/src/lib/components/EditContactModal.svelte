@@ -1,7 +1,12 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { contactsStore } from '$lib/stores/contacts';
+	import { notificationsStore } from '$lib/stores/notifications';
+	import { handleApiError } from '$lib/utils/error-handling';
+	import { validateForm, contactValidationRules } from '$lib/utils/validation';
+	import type { Contact, UpdateContactRequest } from '$lib/api';
 
-	export let contact: any;
+	export let contact: Contact;
 
 	const dispatch = createEventDispatcher();
 
@@ -25,55 +30,50 @@
 		};
 	});
 
-	function checkForChanges() {
-		hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
-	}
 
-	function validateForm(): boolean {
-		errors = {};
 
-		// Required field validation
-		if (!formData.name.trim()) {
-			errors.name = 'Name is required';
-		}
-
-		// Email validation
-		if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-			errors.email = 'Please enter a valid email address';
-		}
-
-		// Phone validation (basic)
-		if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-			errors.phone = 'Please enter a valid phone number';
-		}
-
-		return Object.keys(errors).length === 0;
+	function validateFormData(): boolean {
+		const validation = validateForm(formData, contactValidationRules);
+		errors = validation.errors;
+		return validation.isValid;
 	}
 
 	async function handleSubmit() {
-		if (!validateForm()) return;
+		if (!validateFormData()) return;
 
 		isLoading = true;
 
 		try {
-			// TODO: Replace with actual API call
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			// Mock successful contact update
-			const updatedContact = {
-				...contact,
+			// Prepare the update data
+			const updateData: UpdateContactRequest = {
 				name: formData.name.trim(),
-				email: formData.email.trim() || null,
-				phone: formData.phone.trim() || null,
-				notes: formData.notes.trim() || null,
-				updatedAt: new Date().toISOString()
+				email: formData.email?.trim() || undefined,
+				phone: formData.phone?.trim() || undefined,
+				notes: formData.notes?.trim() || undefined,
 			};
 
+			// Update contact using the API
+			const updatedContact = await contactsStore.updateContact(contact.id, updateData);
+			
+			// Show success notification
+			notificationsStore.success(
+				'Contact Updated',
+				`Successfully updated ${updatedContact.name}`
+			);
+
+			// Dispatch the updated contact to parent component
 			dispatch('contact-updated', updatedContact);
 			
 		} catch (error) {
 			console.error('Error updating contact:', error);
-			errors.general = 'Failed to update contact. Please try again.';
+			const errorMessage = handleApiError(error, 'EditContactModal');
+			errors.general = errorMessage;
+			
+			// Show error notification
+			notificationsStore.error(
+				'Contact Update Failed',
+				errorMessage
+			);
 		} finally {
 			isLoading = false;
 		}
@@ -94,7 +94,7 @@
 	}
 
 	// Watch for changes
-	$: checkForChanges();
+	$: hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -190,16 +190,7 @@
 			</div>
 
 			<!-- Contact Type Info -->
-			{#if contact.type === 'user_reference'}
-				<div class="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-lg text-sm">
-					<div class="flex items-center">
-						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-						</svg>
-						This contact is linked to a system user
-					</div>
-				</div>
-			{/if}
+			<!-- Note: Contact type information removed as it's not available in the current API -->
 
 			<!-- Action Buttons -->
 			<div class="flex items-center justify-end space-x-3 pt-4">
