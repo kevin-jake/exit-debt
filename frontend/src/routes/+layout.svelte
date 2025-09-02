@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Navigation from '$lib/components/Navigation.svelte';
+	import Notifications from '$lib/components/Notifications.svelte';
 	import { getTheme, setTheme } from '$lib/utils';
 	import { authStore } from '$lib/stores/auth';
 
@@ -133,8 +134,14 @@
 			</div>
 		</main>
 	</div>
+
+	<!-- Global Notifications -->
+	<Notifications />
 {:else}
 	<div class="min-h-screen bg-background">
 		{@render children()}
 	</div>
+
+	<!-- Global Notifications -->
+	<Notifications />
 {/if}

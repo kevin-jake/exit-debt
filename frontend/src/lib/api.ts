@@ -55,6 +55,31 @@ export interface ApiError {
   timestamp: string;
 }
 
+// Contact Management Types
+export interface Contact {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContactRequest {
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface UpdateContactRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
 // API client class
 class ApiClient {
   private baseUrl: string;
@@ -175,6 +200,124 @@ class ApiClient {
     timestamp: string;
   }> {
     return this.request("/health");
+  }
+
+  // Contact Management methods
+  async createContact(contactData: CreateContactRequest): Promise<Contact> {
+    const response = await this.request<{
+      ID: string;
+      Name: string;
+      Email?: string;
+      Phone?: string;
+      Notes?: string;
+      IsUser: boolean;
+      UserIDRef?: string;
+      CreatedAt: string;
+      UpdatedAt: string;
+    }>("/contacts", {
+      method: "POST",
+      body: JSON.stringify(contactData),
+    });
+
+    // Transform the response to match our frontend interface
+    return {
+      id: response.ID,
+      name: response.Name,
+      email: response.Email,
+      phone: response.Phone,
+      notes: response.Notes,
+      created_at: response.CreatedAt,
+      updated_at: response.UpdatedAt,
+    };
+  }
+
+  async getContacts(): Promise<Contact[]> {
+    const response = await this.request<
+      {
+        ID: string;
+        Name: string;
+        Email?: string;
+        Phone?: string;
+        Notes?: string;
+        IsUser: boolean;
+        UserIDRef?: string;
+        CreatedAt: string;
+        UpdatedAt: string;
+      }[]
+    >("/contacts");
+
+    // Transform the response to match our frontend interface
+    return response.map((contact) => ({
+      id: contact.ID,
+      name: contact.Name,
+      email: contact.Email,
+      phone: contact.Phone,
+      notes: contact.Notes,
+      created_at: contact.CreatedAt,
+      updated_at: contact.UpdatedAt,
+    }));
+  }
+
+  async getContact(id: string): Promise<Contact> {
+    const response = await this.request<{
+      ID: string;
+      Name: string;
+      Email?: string;
+      Phone?: string;
+      Notes?: string;
+      IsUser: boolean;
+      UserIDRef?: string;
+      CreatedAt: string;
+      UpdatedAt: string;
+    }>(`/contacts/${id}`);
+
+    // Transform the response to match our frontend interface
+    return {
+      id: response.ID,
+      name: response.Name,
+      email: response.Email,
+      phone: response.Phone,
+      notes: response.Notes,
+      created_at: response.CreatedAt,
+      updated_at: response.UpdatedAt,
+    };
+  }
+
+  async updateContact(
+    id: string,
+    contactData: UpdateContactRequest
+  ): Promise<Contact> {
+    const response = await this.request<{
+      ID: string;
+      Name: string;
+      Email?: string;
+      Phone?: string;
+      Notes?: string;
+      IsUser: boolean;
+      UserIDRef?: string;
+      CreatedAt: string;
+      UpdatedAt: string;
+    }>(`/contacts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(contactData),
+    });
+
+    // Transform the response to match our frontend interface
+    return {
+      id: response.ID,
+      name: response.Name,
+      email: response.Email,
+      phone: response.Phone,
+      notes: response.Notes,
+      created_at: response.CreatedAt,
+      updated_at: response.UpdatedAt,
+    };
+  }
+
+  async deleteContact(id: string): Promise<void> {
+    return this.request<void>(`/contacts/${id}`, {
+      method: "DELETE",
+    });
   }
 }
 

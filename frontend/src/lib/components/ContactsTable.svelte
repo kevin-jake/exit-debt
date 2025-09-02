@@ -1,36 +1,34 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { contactsStore } from '$lib/stores/contacts';
+	import { notificationsStore } from '$lib/stores/notifications';
+	import { handleApiError } from '$lib/utils/error-handling';
+	import { formatRelativeTime } from '$lib/utils/date-utils';
+	import type { Contact } from '$lib/api';
 	import ContactDetailsModal from './ContactDetailsModal.svelte';
 	import EditContactModal from './EditContactModal.svelte';
 	import DeleteContactModal from './DeleteContactModal.svelte';
 
-	type Contact = {
-		id: number;
-		name: string;
-		email: string | null;
-		phone: string | null;
-		notes: string | null;
-		type: 'regular' | 'user_reference';
-		createdAt: string;
-		updatedAt: string;
+	// Extended contact type with debt information
+	type ContactWithDebts = Contact & {
 		debtCount?: number;
 		totalOwed?: number;
 		totalOwing?: number;
 	};
 
-	let contacts: Contact[] = [];
-	let filteredContacts: Contact[] = [];
-	let selectedContact: Contact | null = null;
+	let contacts: ContactWithDebts[] = [];
+	let filteredContacts: ContactWithDebts[] = [];
+	let selectedContact: ContactWithDebts | null = null;
 	let showDetailsModal = false;
 	let showEditModal = false;
 	let showDeleteDialog = false;
-	let contactToDelete: Contact | null = null;
+	let contactToDelete: ContactWithDebts | null = null;
+	let isLoading = false;
 
 	// Filter and search state
 	let searchQuery = '';
-	let typeFilter = 'all';
-	let sortBy = 'name';
-	let sortOrder: 'asc' | 'desc' = 'asc';
+	let sortBy = 'created_at';
+	let sortOrder: 'asc' | 'desc' = 'desc';
 
 	// Pagination
 	let currentPage = 1;
@@ -41,80 +39,31 @@
 		loadContacts();
 	});
 
-	function loadContacts() {
-		// Mock data - replace with actual API call
-		contacts = [
-			{
-				id: 1,
-				name: 'Alice Johnson',
-				email: 'alice@example.com',
-				phone: '+63 917 123 4567',
-				notes: 'Close friend from college',
-				type: 'regular',
-				createdAt: '2023-12-01T10:00:00Z',
-				updatedAt: '2024-01-10T14:30:00Z',
-				debtCount: 3,
-				totalOwed: 5000,
-				totalOwing: 1200
-			},
-			{
-				id: 2,
-				name: 'Bob Smith',
-				email: 'bob.smith@example.com',
-				phone: '+63 917 234 5678',
-				notes: 'Business partner',
-				type: 'user_reference',
-				createdAt: '2023-11-15T09:00:00Z',
-				updatedAt: '2023-12-20T16:45:00Z',
-				debtCount: 2,
-				totalOwed: 0,
-				totalOwing: 3500
-			},
-			{
-				id: 3,
-				name: 'Carol Davis',
-				email: 'carol.davis@example.com',
-				phone: null,
-				notes: null,
-				type: 'regular',
-				createdAt: '2023-10-20T11:30:00Z',
-				updatedAt: '2023-10-20T11:30:00Z',
-				debtCount: 1,
-				totalOwed: 800,
-				totalOwing: 0
-			},
-			{
-				id: 4,
-				name: 'David Wilson',
-				email: null,
-				phone: '+63 917 345 6789',
-				notes: 'Neighbor',
-				type: 'regular',
-				createdAt: '2024-01-01T08:00:00Z',
-				updatedAt: '2024-01-05T10:15:00Z',
-				debtCount: 0,
-				totalOwed: 0,
-				totalOwing: 0
-			},
-			{
-				id: 5,
-				name: 'Emma Brown',
-				email: 'emma.brown@example.com',
-				phone: '+63 917 456 7890',
-				notes: 'Family friend, very reliable',
-				type: 'regular',
-				createdAt: '2023-09-15T13:00:00Z',
-				updatedAt: '2024-01-12T09:00:00Z',
-				debtCount: 5,
-				totalOwed: 12000,
-				totalOwing: 0
-			}
-		];
-		filterAndSortContacts();
+	async function loadContacts() {
+		isLoading = true;
+		try {
+			await contactsStore.loadContacts();
+			// Get contacts from store and add debt information
+			contacts = $contactsStore.contacts
+				.filter(contact => contact.id) // Filter out contacts without IDs
+				.map(contact => ({
+					...contact,
+					debtCount: 0, // TODO: Get from API when available
+					totalOwed: 0, // TODO: Get from API when available
+					totalOwing: 0 // TODO: Get from API when available
+				}));
+			filterAndSortContacts();
+		} catch (error) {
+			const errorMessage = handleApiError(error, 'ContactsTable');
+			notificationsStore.error('Failed to Load Contacts', errorMessage);
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function filterAndSortContacts() {
 		let filtered = contacts;
+		
 
 		// Apply search filter
 		if (searchQuery) {
@@ -127,17 +76,12 @@
 			);
 		}
 
-		// Apply type filter
-		if (typeFilter !== 'all') {
-			filtered = filtered.filter(contact => contact.type === typeFilter);
-		}
-
 		// Apply sorting
 		filtered.sort((a, b) => {
-			let aValue: any = a[sortBy as keyof Contact];
-			let bValue: any = b[sortBy as keyof Contact];
+			let aValue: any = a[sortBy as keyof ContactWithDebts];
+			let bValue: any = b[sortBy as keyof ContactWithDebts];
 
-			if (sortBy === 'createdAt' || sortBy === 'updatedAt') {
+			if (sortBy === 'created_at' || sortBy === 'updated_at') {
 				aValue = new Date(aValue).getTime();
 				bValue = new Date(bValue).getTime();
 			}
@@ -174,30 +118,7 @@
 	}
 
 	function formatDate(dateString: string): string {
-		const date = new Date(dateString);
-		const now = new Date();
-		const diffTime = now.getTime() - date.getTime();
-		const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-		if (diffDays === 0) {
-			return 'Today';
-		} else if (diffDays === 1) {
-			return 'Yesterday';
-		} else if (diffDays < 7) {
-			return `${diffDays} days ago`;
-		} else if (diffDays < 30) {
-			const weeks = Math.floor(diffDays / 7);
-			return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-		} else if (diffDays < 365) {
-			const months = Math.floor(diffDays / 30);
-			return `${months} month${months > 1 ? 's' : ''} ago`;
-		} else {
-			return date.toLocaleDateString('en-US', {
-				month: 'short',
-				day: 'numeric',
-				year: 'numeric'
-			});
-		}
+		return formatRelativeTime(dateString);
 	}
 
 	function formatCurrency(amount: number): string {
@@ -207,10 +128,8 @@
 		}).format(amount);
 	}
 
-	function getTypeBadgeClass(type: string): string {
-		return type === 'user_reference' 
-			? 'bg-success/10 text-success' 
-			: 'bg-primary/10 text-primary';
+	function getTypeBadgeClass(): string {
+		return 'bg-primary/10 text-primary';
 	}
 
 	function viewContact(contact: Contact) {
@@ -228,12 +147,20 @@
 		showDeleteDialog = true;
 	}
 
-	function deleteContact() {
+	async function deleteContact() {
 		if (contactToDelete) {
-			contacts = contacts.filter(c => c.id !== contactToDelete?.id);
-			filterAndSortContacts();
-			contactToDelete = null;
-			showDeleteDialog = false;
+			try {
+				await contactsStore.deleteContact(contactToDelete.id);
+				contacts = contacts.filter(c => c.id !== contactToDelete?.id);
+				filterAndSortContacts();
+				notificationsStore.success('Contact Deleted', `Successfully deleted ${contactToDelete.name}`);
+			} catch (error) {
+				const errorMessage = handleApiError(error, 'ContactsTable');
+				notificationsStore.error('Failed to Delete Contact', errorMessage);
+			} finally {
+				contactToDelete = null;
+				showDeleteDialog = false;
+			}
 		}
 	}
 
@@ -243,14 +170,28 @@
 		const updatedContact = event.detail;
 		const index = contacts.findIndex(c => c.id === updatedContact.id);
 		if (index !== -1) {
-			contacts[index] = updatedContact;
+			contacts[index] = { ...updatedContact, debtCount: 0, totalOwed: 0, totalOwing: 0 };
 			filterAndSortContacts();
 		}
 		showEditModal = false;
+		notificationsStore.success('Contact Updated', `Successfully updated ${updatedContact.name}`);
 	}
 
 	$: {
 		// React to filter changes
+		filterAndSortContacts();
+	}
+
+	// Watch for changes in the contacts store and refresh the table
+	$: if ($contactsStore.contacts.length > 0) {
+		contacts = $contactsStore.contacts
+			.filter(contact => contact.id) // Filter out contacts without IDs
+			.map(contact => ({
+				...contact,
+				debtCount: 0, // TODO: Get from API when available
+				totalOwed: 0, // TODO: Get from API when available
+				totalOwing: 0 // TODO: Get from API when available
+			}));
 		filterAndSortContacts();
 	}
 
@@ -261,8 +202,18 @@
 </script>
 
 <div class="space-y-6">
-	<!-- Header with Search and Filters -->
-	<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+	<!-- Loading State -->
+	{#if isLoading}
+		<div class="text-center py-12">
+			<svg class="animate-spin mx-auto w-8 h-8 text-primary mb-4" fill="none" viewBox="0 0 24 24">
+				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+			</svg>
+			<p class="text-muted-foreground">Loading contacts...</p>
+		</div>
+	{:else}
+		<!-- Header with Search and Filters -->
+		<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 		<div class="flex-1 max-w-md">
 			<div class="relative">
 				<svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,11 +229,7 @@
 		</div>
 
 		<div class="flex items-center space-x-4">
-			<select bind:value={typeFilter} class="input">
-				<option value="all">All Types</option>
-				<option value="regular">Regular Contact</option>
-				<option value="user_reference">User Reference</option>
-			</select>
+			<!-- Type filter removed as it's not available in the API -->
 		</div>
 	</div>
 
@@ -301,18 +248,15 @@
 						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
 							Contact Info
 						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer" on:click={() => handleSort('type')}>
+						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
 							Type
-							{#if sortBy === 'type'}
-								<span class="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-							{/if}
 						</th>
 						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
 							Debt Summary
 						</th>
-						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer" on:click={() => handleSort('createdAt')}>
+						<th class="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer" on:click={() => handleSort('created_at')}>
 							Created
-							{#if sortBy === 'createdAt'}
+							{#if sortBy === 'created_at'}
 								<span class="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
 							{/if}
 						</th>
@@ -322,7 +266,7 @@
 					</tr>
 				</thead>
 				<tbody class="bg-card divide-y divide-border">
-					{#each paginatedContacts as contact (contact.id)}
+					{#each paginatedContacts as contact, index (contact.id || `contact-${index}`)}
 						<tr class="hover:bg-muted/30 cursor-pointer transition-colors duration-200" on:click={() => viewContact(contact)}>
 							<td class="px-6 py-4 whitespace-nowrap">
 								<div class="flex items-center">
@@ -363,8 +307,8 @@
 								</div>
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap">
-								<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getTypeBadgeClass(contact.type)}">
-									{contact.type === 'user_reference' ? 'User Reference' : 'Regular Contact'}
+								<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getTypeBadgeClass()}">
+									Regular Contact
 								</span>
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap">
@@ -385,7 +329,7 @@
 								{/if}
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-								{formatDate(contact.createdAt)}
+								{formatDate(contact.created_at)}
 							</td>
 							<td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
 								<div class="flex items-center space-x-2" on:click|stopPropagation on:keydown|stopPropagation role="group">
@@ -431,7 +375,7 @@
 
 	<!-- Mobile Card Layout -->
 	<div class="lg:hidden space-y-4">
-		{#each paginatedContacts as contact (contact.id)}
+		{#each paginatedContacts as contact, index (contact.id || `contact-${index}`)}
 			<div class="card p-4" on:click={() => viewContact(contact)} on:keydown={(e) => e.key === 'Enter' && viewContact(contact)} role="button" tabindex="0">
 				<div class="flex items-start justify-between mb-3">
 					<div class="flex items-center space-x-3">
@@ -442,12 +386,12 @@
 						</div>
 						<div>
 							<div class="font-medium text-foreground">{contact.name}</div>
-							<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getTypeBadgeClass(contact.type)}">
-								{contact.type === 'user_reference' ? 'User Reference' : 'Regular Contact'}
+							<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getTypeBadgeClass()}">
+								Regular Contact
 							</span>
 						</div>
 					</div>
-					<span class="text-xs text-muted-foreground">{formatDate(contact.createdAt)}</span>
+					<span class="text-xs text-muted-foreground">{formatDate(contact.created_at)}</span>
 				</div>
 				
 				<div class="space-y-2 text-sm mb-3">
@@ -525,11 +469,12 @@
 			</svg>
 			<h3 class="text-lg font-medium text-foreground mb-2">No contacts found</h3>
 			<p class="text-muted-foreground mb-4">
-				{searchQuery || typeFilter !== 'all' 
-					? 'Try adjusting your filters or search query.'
+				{searchQuery 
+					? 'Try adjusting your search query.'
 					: 'Get started by adding your first contact.'}
 			</p>
 		</div>
+	{/if}
 	{/if}
 </div>
 

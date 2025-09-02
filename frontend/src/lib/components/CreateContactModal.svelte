@@ -1,9 +1,14 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { contactsStore } from '$lib/stores/contacts';
+	import { notificationsStore } from '$lib/stores/notifications';
+	import type { CreateContactRequest } from '$lib/api';
+	import { validateForm, contactValidationRules } from '$lib/utils/validation';
+	import { handleApiError } from '$lib/utils/error-handling';
 
 	const dispatch = createEventDispatcher();
 
-	let formData = {
+	let formData: CreateContactRequest = {
 		name: '',
 		email: '',
 		phone: '',
@@ -21,51 +26,46 @@
 		};
 	});
 
-	function validateForm(): boolean {
-		errors = {};
-
-		// Required field validation
-		if (!formData.name.trim()) {
-			errors.name = 'Name is required';
-		}
-
-		// Email validation
-		if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-			errors.email = 'Please enter a valid email address';
-		}
-
-		// Phone validation (basic)
-		if (formData.phone && !/^[\d\s\-\+\(\)]+$/.test(formData.phone)) {
-			errors.phone = 'Please enter a valid phone number';
-		}
-
-		return Object.keys(errors).length === 0;
+	function validateFormData(): boolean {
+		const validation = validateForm(formData, contactValidationRules);
+		errors = validation.errors;
+		return validation.isValid;
 	}
 
 	async function handleSubmit() {
-		if (!validateForm()) return;
+		if (!validateFormData()) return;
 
 		isLoading = true;
 
-		try {
-			// TODO: Replace with actual API call
-			await new Promise(resolve => setTimeout(resolve, 1000));
+				try {
+			// Create contact using the API
+		const contactData: CreateContactRequest = {
+			name: formData.name.trim(),
+			email: formData.email?.trim() || undefined,
+			phone: formData.phone?.trim() || undefined,
+			notes: formData.notes?.trim() || undefined,
+		};
 
-			// Mock successful contact creation
-			const newContact = {
-				id: Date.now(),
-				name: formData.name.trim(),
-				email: formData.email.trim() || null,
-				phone: formData.phone.trim() || null,
-				notes: formData.notes.trim() || null,
-				createdAt: new Date().toISOString()
-			};
+		const newContact = await contactsStore.createContact(contactData);
+		
+		// Show success notification
+		notificationsStore.success(
+			'Contact Created',
+			`Successfully created contact "${newContact.name}"`
+		);
 
-			dispatch('contact-created', newContact);
+		dispatch('contact-created', newContact);
 			
 		} catch (error) {
 			console.error('Error creating contact:', error);
-			errors.general = 'Failed to create contact. Please try again.';
+			const errorMessage = handleApiError(error, 'CreateContactModal');
+			errors.general = errorMessage;
+			
+			// Show error notification
+			notificationsStore.error(
+				'Contact Creation Failed',
+				errorMessage
+			);
 		} finally {
 			isLoading = false;
 		}
@@ -170,7 +170,7 @@
 					disabled={isLoading}
 				></textarea>
 				<div class="mt-1 text-xs text-muted-foreground">
-					{formData.notes.length}/500 characters
+					{formData.notes?.length || 0}/500 characters
 				</div>
 			</div>
 
