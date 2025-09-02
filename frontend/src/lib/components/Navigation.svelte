@@ -2,6 +2,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { themeStore } from '$lib/stores/theme.svelte';
+	import { authStore } from '$lib/stores/auth';
 	import { cn } from '$lib/utils';
 	import { createEventDispatcher } from 'svelte';
 
@@ -31,7 +32,7 @@
 	};
 
 	function handleLogout() {
-		// TODO: Implement logout logic
+		authStore.logout();
 		goto('/login');
 	}
 
@@ -45,6 +46,11 @@
 		}
 		goto(href);
 	}
+
+	// Get user initials for avatar - ensure reactivity
+	$: userInitials = $authStore.user && $authStore.user.first_name && $authStore.user.last_name
+		? `${$authStore.user.first_name[0]}${$authStore.user.last_name[0]}`
+		: 'U';
 </script>
 
 <nav class={cn(
@@ -134,11 +140,21 @@
 	<div class="absolute bottom-0 left-0 right-0 p-6 border-t border-border">
 		<div class="flex items-center space-x-3 mb-3">
 			<div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-				<span class="text-primary-foreground text-sm font-medium">JD</span>
+				<span class="text-primary-foreground text-sm font-medium">{userInitials}</span>
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-sm font-medium text-card-foreground truncate">John Doe</p>
-				<p class="text-xs text-muted-foreground truncate">john@example.com</p>
+				{#if $authStore.user && $authStore.user.first_name && $authStore.user.last_name}
+					<p class="text-sm font-medium text-card-foreground truncate">
+						{$authStore.user.first_name} {$authStore.user.last_name}
+					</p>
+					<p class="text-xs text-muted-foreground truncate">{$authStore.user.email}</p>
+				{:else if $authStore.isLoading}
+					<p class="text-sm font-medium text-card-foreground truncate">User</p>
+					<p class="text-xs text-muted-foreground truncate">Loading...</p>
+				{:else}
+					<p class="text-sm font-medium text-card-foreground truncate">User</p>
+					<p class="text-xs text-muted-foreground truncate">Not signed in</p>
+				{/if}
 			</div>
 		</div>
 		<button

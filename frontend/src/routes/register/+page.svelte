@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { apiClient, tokenManager } from '$lib/api';
+	import { authStore } from '$lib/stores/auth';
 
 	let firstName = $state('');
 	let lastName = $state('');
@@ -37,16 +39,33 @@
 		isLoading = true;
 
 		try {
-			// TODO: Implement actual registration API call
-			// Simulate API call
-			await new Promise(resolve => setTimeout(resolve, 1500));
+			const userData = {
+				email,
+				password,
+				first_name: firstName,
+				last_name: lastName,
+				phone: phone || undefined
+			};
+
+			const response = await apiClient.register(userData);
 			
-			// Mock registration success
-			// TODO: Store JWT token
-			localStorage.setItem('token', 'mock-jwt-token');
+			// After successful registration, automatically log in
+			const loginResponse = await apiClient.login({ email, password });
+			
+			// Store the JWT token
+			tokenManager.setToken(loginResponse.token);
+			
+			// Update auth store with user data
+			authStore.setUser(loginResponse.user);
+			
+			// Redirect to dashboard
 			goto('/');
 		} catch (err) {
-			error = 'An error occurred during registration. Please try again.';
+			if (err instanceof Error) {
+				error = err.message;
+			} else {
+				error = 'An error occurred during registration. Please try again.';
+			}
 		} finally {
 			isLoading = false;
 		}

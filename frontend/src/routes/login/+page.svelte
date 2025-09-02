@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { apiClient, tokenManager } from '$lib/api';
+	import { authStore } from '$lib/stores/auth';
 
 	let email = $state('');
 	let password = $state('');
@@ -16,20 +18,22 @@
 		error = '';
 
 		try {
-			// TODO: Implement actual login API call
-			// Simulate API call
-			await new Promise(resolve => setTimeout(resolve, 1000));
+			const response = await apiClient.login({ email, password });
 			
-			// Mock login - in real app, validate credentials
-			if (email === 'demo@example.com' && password === 'password') {
-				// TODO: Store JWT token
-				localStorage.setItem('token', 'mock-jwt-token');
-				goto('/');
-			} else {
-				error = 'Invalid email or password';
-			}
+			// Store the JWT token
+			tokenManager.setToken(response.token);
+			
+			// Update auth store with user data
+			authStore.setUser(response.user);
+			
+			// Redirect to dashboard
+			goto('/');
 		} catch (err) {
-			error = 'An error occurred. Please try again.';
+			if (err instanceof Error) {
+				error = err.message;
+			} else {
+				error = 'An error occurred. Please try again.';
+			}
 		} finally {
 			isLoading = false;
 		}
@@ -127,13 +131,6 @@
 					{/if}
 				</button>
 			</form>
-
-			<!-- Demo Credentials -->
-			<div class="mt-6 p-4 bg-primary/10 rounded-lg">
-				<p class="text-sm font-medium text-primary mb-2">Demo Credentials:</p>
-				<p class="text-sm text-primary/80">Email: demo@example.com</p>
-				<p class="text-sm text-primary/80">Password: password</p>
-			</div>
 		</div>
 
 		<!-- Register Link -->

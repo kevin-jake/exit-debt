@@ -2,16 +2,21 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import Navigation from '$lib/components/Navigation.svelte';
 	import { getTheme, setTheme } from '$lib/utils';
+	import { authStore } from '$lib/stores/auth';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	// Mobile navigation state
 	let isMobileMenuOpen = $state(false);
 
 	// Check if current page should show navigation
 	const showNavigation = $derived(!$page.url.pathname.startsWith('/login') && !$page.url.pathname.startsWith('/register'));
+
+	// Define public routes that don't require authentication
+	const publicRoutes = ['/login', '/register', '/forgot-password', '/terms', '/privacy', '/test-api'];
 
 	function toggleMobileMenu() {
 		isMobileMenuOpen = !isMobileMenuOpen;
@@ -21,10 +26,32 @@
 		isMobileMenuOpen = false;
 	}
 
+	// Client-side authentication check
+	function checkAuthentication() {
+		const isPublicRoute = publicRoutes.some(route => $page.url.pathname.startsWith(route));
+		const isAuthenticated = $authStore.isAuthenticated;
+
+		// If user is not authenticated and trying to access a protected route
+		if (!isAuthenticated && !isPublicRoute) {
+			goto('/login');
+		}
+
+		// If user is authenticated and trying to access login/register pages
+		if (isAuthenticated && ($page.url.pathname === '/login' || $page.url.pathname === '/register')) {
+			goto('/');
+		}
+	}
+
 	onMount(() => {
 		// Initialize theme
 		const theme = getTheme();
 		setTheme(theme);
+
+		// Initialize auth store
+		authStore.init().then(() => {
+			// Check authentication after store is initialized
+			checkAuthentication();
+		});
 
 		// Close mobile menu when clicking outside
 		function handleClickOutside(event: MouseEvent) {
@@ -36,6 +63,13 @@
 
 		document.addEventListener('click', handleClickOutside);
 		return () => document.removeEventListener('click', handleClickOutside);
+	});
+
+	// Check authentication when route changes
+	$effect(() => {
+		if ($authStore.isLoading === false) {
+			checkAuthentication();
+		}
 	});
 
 	// Close mobile menu when route changes
