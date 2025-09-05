@@ -28,7 +28,25 @@ function createDebtsStore() {
       update((state) => ({ ...state, isLoading: true, error: null }));
       try {
         const debts = await apiClient.getDebtLists();
-        update((state) => ({ ...state, debts, isLoading: false }));
+        // Transform the response to match our frontend interface
+        const transformedDebts = debts.map((debt) => ({
+          id: debt.id,
+          type: debt.type || "unknown",
+          totalAmount: debt.totalAmount || debt.total_amount || 0,
+          remainingBalance:
+            debt.remainingBalance || debt.remaining_balance || 0,
+          status: debt.status,
+          description: debt.description,
+          currency: debt.currency,
+          contactId: debt.contactId,
+          created_at: debt.created_at,
+          updated_at: debt.updated_at,
+        }));
+        update((state) => ({
+          ...state,
+          debts: transformedDebts,
+          isLoading: false,
+        }));
       } catch (error) {
         update((state) => ({
           ...state,

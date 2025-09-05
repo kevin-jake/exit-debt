@@ -1,29 +1,23 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { apiClient, type Payment } from '../api';
 	import ReceiptPhotoViewer from './ReceiptPhotoViewer.svelte';
 
 	export let debt: any;
 
 	const dispatch = createEventDispatcher();
 
-	type Payment = {
-		id: number;
-		date: string;
-		amount: number;
-		method: 'cash' | 'bank_transfer' | 'check' | 'digital_wallet' | 'other';
-		status: 'completed' | 'pending' | 'failed' | 'refunded' | 'rejected';
-		description?: string;
-		receiptPhotoURL?: string;
-	};
-
 	let payments: Payment[] = [];
 	let showPaymentForm = false;
 	let newPayment = {
-		amount: 0,
-		method: 'cash' as const,
+		amount: '',
+		payment_date: '',
+		payment_method: 'cash',
 		description: '',
 		receiptPhoto: undefined as File | undefined
 	};
+	let isLoading = false;
+	let error: string | null = null;
 
 	// Receipt photo viewer state
 	let showReceiptViewer = false;
@@ -40,34 +34,59 @@
 		};
 	});
 
-	function loadPayments() {
-		// Mock payment data - replace with actual API call
-		payments = [
-			{
-				id: 1,
-				date: '2024-01-01',
-				amount: 500.00,
-				method: 'bank_transfer',
-				status: 'completed',
-				description: 'First installment payment',
-				receiptPhotoURL: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop'
-			},
-			{
-				id: 2,
-				date: '2024-01-15',
-				amount: 200.00,
-				method: 'cash',
-				status: 'completed',
-				description: 'Partial payment'
+	async function loadPayments() {
+		if (!debt?.id) {
+			console.error('No debt ID provided');
+			error = 'No debt ID provided';
+			payments = [];
+			return;
+		}
+
+		isLoading = true;
+		error = null;
+		
+		try {
+			console.log('Loading payments for debt:', debt.id);
+			payments = await apiClient.getPayments(debt.id);
+			console.log('Loaded payments:', payments);
+			
+			// Filter out payments without valid IDs and ensure unique IDs
+			payments = payments.filter(payment => payment.id && payment.id.trim() !== '');
+			
+			// Check for duplicate or undefined IDs
+			const ids = payments.map(p => p.id);
+			const uniqueIds = new Set(ids);
+			if (ids.length !== uniqueIds.size) {
+				console.warn('Duplicate payment IDs found:', ids);
+				// Remove duplicates by keeping only the first occurrence
+				const seen = new Set();
+				payments = payments.filter(payment => {
+					if (seen.has(payment.id)) {
+						return false;
+					}
+					seen.add(payment.id);
+					return true;
+				});
 			}
-		];
+			if (ids.some(id => !id)) {
+				console.warn('Some payments have undefined IDs:', payments.filter(p => !p.id));
+			}
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load payments';
+			console.error('Error loading payments:', err);
+			// Set empty array on error to prevent UI issues
+			payments = [];
+		} finally {
+			isLoading = false;
+		}
 	}
 
-	function formatCurrency(amount: number, currency: string = 'PHP'): string {
+	function formatCurrency(amount: number | string, currency: string = 'PHP'): string {
+		const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
 		return new Intl.NumberFormat('en-PH', {
 			style: 'currency',
 			currency: currency
-		}).format(amount);
+		}).format(numAmount);
 	}
 
 	function formatDate(dateString: string): string {
@@ -95,30 +114,18 @@
 
 	function getPaymentStatusClass(status: string): string {
 		switch (status) {
+			case 'verified':
 			case 'completed':
 				return 'bg-success/10 text-success';
 			case 'pending':
 				return 'bg-warning/10 text-warning';
-			case 'failed':
+			case 'overdue':
 				return 'bg-destructive/10 text-destructive';
-			case 'refunded':
-				return 'bg-muted/50 text-muted-foreground';
 			case 'rejected':
 				return 'bg-destructive/10 text-destructive';
 			default:
 				return 'bg-muted/50 text-muted-foreground';
 		}
-	}
-
-	function getMethodText(method: string): string {
-		const methods = {
-			'cash': 'Cash',
-			'bank_transfer': 'Bank Transfer',
-			'check': 'Check',
-			'digital_wallet': 'Digital Wallet',
-			'other': 'Other'
-		};
-		return methods[method as keyof typeof methods] || method;
 	}
 
 	// File validation
@@ -168,57 +175,64 @@
 	}
 
 	function calculateProgress(): number {
-		if (debt.totalAmount === 0) return 100;
-		const paid = debt.totalAmount - debt.remainingBalance;
-		return Math.round((paid / debt.totalAmount) * 100);
+		const totalAmount = parseFloat(debt.total_amount);
+		if (totalAmount === 0) return 100;
+		const paid = totalAmount - debt.remainingBalance;
+		return Math.round((paid / totalAmount) * 100);
 	}
 
-	function handleAddPayment() {
-		if (newPayment.amount > 0) {
-			// Create receipt photo URL if photo was uploaded
-			let receiptPhotoURL: string | undefined;
-			if (newPayment.receiptPhoto) {
-				// In a real app, this would upload to server and return URL
-				// For now, create a mock URL
-				receiptPhotoURL = 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop';
-			}
+	async function handleAddPayment() {
+		if (parseFloat(newPayment.amount) > 0 && newPayment.payment_date) {
+			try {
+				console.log('Creating payment:', newPayment);
+				// Create the payment via API
+				const payment = await apiClient.createPayment(debt.id, {
+					amount: newPayment.amount,
+					payment_date: newPayment.payment_date,
+					payment_method: newPayment.payment_method,
+					description: newPayment.description
+				});
 
-			const payment: Payment = {
-				id: payments.length + 1,
-				date: new Date().toISOString().split('T')[0],
-				amount: newPayment.amount,
-				method: newPayment.method,
-				status: 'completed',
-				description: newPayment.description,
-				receiptPhotoURL
-			};
-			payments = [payment, ...payments];
-			
-			// Reset form
-			newPayment = {
-				amount: 0,
-				method: 'cash' as const,
-				description: '',
-				receiptPhoto: undefined
-			};
-			showPaymentForm = false;
+				console.log('Payment created:', payment);
+
+				// Upload receipt photo if provided
+				if (newPayment.receiptPhoto) {
+					console.log('Uploading receipt photo');
+					await apiClient.uploadReceipt(payment.id, newPayment.receiptPhoto);
+				}
+
+				// Reload payments to get updated data
+				await loadPayments();
+				
+				// Reset form
+				newPayment = {
+					amount: '',
+					payment_date: '',
+					payment_method: 'cash',
+					description: '',
+					receiptPhoto: undefined
+				};
+				showPaymentForm = false;
+			} catch (err) {
+				error = err instanceof Error ? err.message : 'Failed to add payment';
+				console.error('Error adding payment:', err);
+			}
+		} else {
+			error = 'Please provide both amount and payment date';
 		}
 	}
 
-	function verifyPayment(paymentId: number) {
-		// Find the payment and update its status
-		payments = payments.map(payment => {
-			if (payment.id === paymentId) {
-				return {
-					...payment,
-					status: 'completed' as const
-				};
-			}
-			return payment;
-		});
-		
-		// In a real app, this would make an API call to verify the payment
-		console.log(`Payment ${paymentId} verified`);
+	async function verifyPayment(paymentId: string) {
+		try {
+			console.log('Verifying payment:', paymentId);
+			await apiClient.verifyPayment(paymentId);
+			console.log('Payment verified successfully');
+			// Reload payments to get updated data
+			await loadPayments();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to verify payment';
+			console.error('Error verifying payment:', err);
+		}
 	}
 
 	function closeModal() {
@@ -284,7 +298,7 @@
 									<div>
 										<div class="font-medium text-foreground">{debt.contactName}</div>
 										<div class="text-sm text-muted-foreground">
-											{debt.type === 'owed_to_me' ? 'Owes you money' : 'You owe money to'}
+											{debt.debt_type === 'owed_to_me' ? 'Owes you money' : 'You owe money to'}
 										</div>
 									</div>
 								</div>
@@ -292,8 +306,8 @@
 								<div class="grid grid-cols-2 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Debt Type</label>
-										<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {debt.type === 'owed_to_me' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
-											{debt.type === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
+										<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {debt.debt_type === 'owed_to_me' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
+											{debt.debt_type === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
 										</span>
 									</div>
 									<div>
@@ -311,7 +325,7 @@
 
 								<div>
 									<label class="block text-sm font-medium text-muted-foreground mb-1">Created</label>
-									<div class="text-sm text-foreground">{formatDate(debt.createdAt)}</div>
+									<div class="text-sm text-foreground">{formatDate(debt.created_at)}</div>
 								</div>
 							</div>
 						</div>
@@ -325,7 +339,7 @@
 								<div class="grid grid-cols-2 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Total Amount</label>
-										<div class="text-lg font-semibold text-foreground">{formatCurrency(debt.totalAmount, debt.currency)}</div>
+										<div class="text-lg font-semibold text-foreground">{formatCurrency(debt.total_amount, debt.currency)}</div>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Remaining Balance</label>
@@ -353,7 +367,7 @@
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Installment Plan</label>
-										<div class="text-sm text-foreground">{getInstallmentText(debt.installmentPlan)}</div>
+										<div class="text-sm text-foreground">{getInstallmentText(debt.installment_plan)}</div>
 									</div>
 								</div>
 
@@ -387,7 +401,12 @@
 					{#if showPaymentForm}
 						<div class="card p-4 mb-4">
 							<h4 class="font-medium text-foreground mb-4">Record New Payment</h4>
-							<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+							{#if error}
+								<div class="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+									<p class="text-destructive text-sm">{error}</p>
+								</div>
+							{/if}
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div>
 									<label class="label">Amount</label>
 									<input 
@@ -400,16 +419,24 @@
 									/>
 								</div>
 								<div>
+									<label class="label">Payment Date</label>
+									<input 
+										type="date" 
+										bind:value={newPayment.payment_date} 
+										class="input"
+									/>
+								</div>
+								<div>
 									<label class="label">Payment Method</label>
-									<select bind:value={newPayment.method} class="input">
+									<select bind:value={newPayment.payment_method} class="input">
 										<option value="cash">Cash</option>
 										<option value="bank_transfer">Bank Transfer</option>
 										<option value="check">Check</option>
 										<option value="digital_wallet">Digital Wallet</option>
-										<option value="other">Other</option>
 									</select>
 								</div>
-								<div>
+							</div>
+							<div class="mt-4">
 									<label class="label">Description (Optional)</label>
 									<input 
 										type="text" 
@@ -417,7 +444,6 @@
 										class="input"
 										placeholder="Payment description"
 									/>
-								</div>
 							</div>
 
 							<!-- Receipt Photo Upload -->
@@ -475,7 +501,30 @@
 					{/if}
 
 					<!-- Payments Table -->
-					{#if payments.length > 0}
+					{#if isLoading}
+						<div class="card p-8 text-center">
+							<div class="flex items-center justify-center space-x-2">
+								<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+								<span class="text-muted-foreground">Loading payments...</span>
+							</div>
+						</div>
+					{:else if error}
+						<div class="card p-8 text-center">
+							<div class="flex items-center justify-center space-x-2 mb-4">
+								<svg class="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+								</svg>
+								<span class="text-destructive font-medium">Failed to load payments</span>
+							</div>
+							<p class="text-muted-foreground mb-4">{error}</p>
+							<button on:click={loadPayments} class="btn-secondary">
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+								</svg>
+								Try Again
+							</button>
+						</div>
+					{:else if payments.length > 0}
 						<div class="card overflow-hidden">
 							<div class="overflow-x-auto">
 								<table class="w-full">
@@ -483,36 +532,32 @@
 										<tr>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Method</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Description</th>
 											<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt</th>
-											{#if debt.type === 'owed_to_me'}
+											{#if debt.debt_type === 'owed_to_me'}
 												<th class="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
 											{/if}
 										</tr>
 									</thead>
 									<tbody class="bg-card divide-y divide-border">
-										{#each payments as payment (payment.id)}
+										{#each payments as payment, index (payment.id || `payment-${index}`)}
 											<tr>
-												<td class="px-4 py-3 text-sm text-foreground">{formatDate(payment.date)}</td>
-												<td class="px-4 py-3 text-sm font-medium text-foreground">{formatCurrency(payment.amount, debt.currency)}</td>
-												<td class="px-4 py-3 text-sm text-foreground">{getMethodText(payment.method)}</td>
+												<td class="px-4 py-3 text-sm text-foreground">{formatDate(payment.payment_date)}</td>
+												<td class="px-4 py-3 text-sm font-medium text-foreground">{formatCurrency(payment.amount, payment.currency || debt.currency)}</td>
 												<td class="px-4 py-3">
 													<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getPaymentStatusClass(payment.status)}">
 														{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
 													</span>
 												</td>
-												<td class="px-4 py-3 text-sm text-muted-foreground">{payment.description || 'N/A'}</td>
 												<td class="px-4 py-3">
-													{#if payment.receiptPhotoURL}
+													{#if payment.receipt_photo_url}
 														<button 
-															on:click={() => viewReceiptPhoto(payment.receiptPhotoURL!)}
+															on:click={() => viewReceiptPhoto(payment.receipt_photo_url!)}
 															class="w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors"
 															title="View receipt"
 														>
 															<img 
-																src={payment.receiptPhotoURL} 
+																src={payment.receipt_photo_url} 
 																alt="Receipt" 
 																class="w-full h-full object-cover"
 															/>
@@ -525,9 +570,9 @@
 														</div>
 													{/if}
 												</td>
-												{#if debt.type === 'owed_to_me'}
+												{#if debt.debt_type === 'owed_to_me'}
 													<td class="px-4 py-3">
-														{#if payment.status !== 'completed'}
+														{#if payment.status !== 'verified' && payment.status !== 'completed'}
 															<button 
 																on:click={() => verifyPayment(payment.id)}
 																class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
