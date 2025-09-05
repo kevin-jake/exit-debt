@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { contactsStore } from '$lib/stores/contacts';
+	import { notificationsStore } from '$lib/stores/notifications';
+	import { handleApiError } from '$lib/utils/error-handling';
+	import { apiClient } from '$lib/api';
+	import type { Contact, DebtList } from '$lib/api';
 
-	export let contact: any;
+	export let contact: Contact;
 
 	const dispatch = createEventDispatcher();
 
@@ -10,7 +15,7 @@
 	let confirmationText = '';
 	let confirmationChecked = false;
 	let isLoading = false;
-	let relatedDebts: any[] = [];
+	let relatedDebts: DebtList[] = [];
 	let hasRelatedDebts = false;
 	let checkingDebts = true;
 
@@ -29,37 +34,15 @@
 	async function checkRelatedDebts() {
 		checkingDebts = true;
 		try {
-			// TODO: Replace with actual API call
-			// GET /api/v1/contacts/:id/debts
-			await new Promise(resolve => setTimeout(resolve, 1000));
-
-			// Mock data - simulate checking for related debts
-			const mockDebts = Math.random() > 0.5 ? [
-				{
-					id: 1,
-					type: 'owed_to_me',
-					totalAmount: 2500.00,
-					remainingBalance: 1800.00,
-					status: 'active',
-					description: 'Personal loan',
-					currency: 'PHP'
-				},
-				{
-					id: 2,
-					type: 'i_owe',
-					totalAmount: 1200.00,
-					remainingBalance: 800.00,
-					status: 'overdue',
-					description: 'Car repair',
-					currency: 'PHP'
-				}
-			] : [];
-
-			relatedDebts = mockDebts;
+			// Get related debts from API
+			relatedDebts = await apiClient.getContactDebts(contact.id);
+			console.log(relatedDebts);	
 			hasRelatedDebts = relatedDebts.length > 0;
 		} catch (error) {
 			console.error('Error checking related debts:', error);
-			// In real app, show error message
+			// If API call fails, assume no related debts to allow deletion
+			relatedDebts = [];
+			hasRelatedDebts = false;
 		} finally {
 			checkingDebts = false;
 		}
@@ -97,14 +80,25 @@
 		isLoading = true;
 
 		try {
-			// TODO: Replace with actual API call
-			// DELETE /api/v1/contacts/:id
-			await new Promise(resolve => setTimeout(resolve, 1500));
+			// Delete contact using the API
+			await contactsStore.deleteContact(contact.id);
+			
+			// Show success notification
+			notificationsStore.success(
+				'Contact Deleted',
+				`Successfully deleted ${contact.name}`
+			);
 			
 			dispatch('confirm');
 		} catch (error) {
 			console.error('Error deleting contact:', error);
-			// Handle error - in real app, show error message
+			const errorMessage = handleApiError(error, 'DeleteContactModal');
+			
+			// Show error notification
+			notificationsStore.error(
+				'Contact Deletion Failed',
+				errorMessage
+			);
 		} finally {
 			isLoading = false;
 		}
@@ -115,7 +109,7 @@
 		goto(`/debts?contactId=${contact.id}`);
 	}
 
-	function handleViewDebt(debtId: number) {
+	function handleViewDebt(debtId: string) {
 		dispatch('close');
 		// In real app, this would open the debt details modal or navigate to debt page
 		goto(`/debts?debtId=${debtId}`);
@@ -218,6 +212,10 @@
 						
 						<div class="space-y-3">
 							{#each relatedDebts as debt (debt.id)}
+								<!-- Debug info -->
+								<div class="text-xs text-red-500 mb-2">
+									Debug: ID={debt.id}, Type={debt.type}, Status={debt.status}, Amount={debt.totalAmount}
+								</div>
 								<button
 									on:click={() => handleViewDebt(debt.id)}
 									class="w-full text-left p-4 bg-muted/50 hover:bg-muted/70 rounded-lg transition-colors duration-200"
@@ -314,8 +312,8 @@
 								</div>
 								<div>
 									<div class="font-medium text-foreground">{contact.name}</div>
-									<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {contact.type === 'user_reference' ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary'}">
-										{contact.type === 'user_reference' ? 'User Reference' : 'Regular Contact'}
+									<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-primary/10 text-primary">
+										Regular Contact
 									</span>
 								</div>
 							</div>

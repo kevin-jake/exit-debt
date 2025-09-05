@@ -150,16 +150,13 @@
 	async function deleteContact() {
 		if (contactToDelete) {
 			try {
-				await contactsStore.deleteContact(contactToDelete.id);
-				contacts = contacts.filter(c => c.id !== contactToDelete?.id);
-				filterAndSortContacts();
-				notificationsStore.success('Contact Deleted', `Successfully deleted ${contactToDelete.name}`);
+				// The actual deletion is handled by DeleteContactModal
+				// Just close the modal and let the reactive statement handle the update
+				contactToDelete = null;
+				showDeleteDialog = false;
 			} catch (error) {
 				const errorMessage = handleApiError(error, 'ContactsTable');
 				notificationsStore.error('Failed to Delete Contact', errorMessage);
-			} finally {
-				contactToDelete = null;
-				showDeleteDialog = false;
 			}
 		}
 	}
