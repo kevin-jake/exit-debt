@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	export let paymentType: 'one_time' | 'installment' = 'one_time';
 	export let dueDate: string = '';
@@ -31,7 +32,7 @@
 	function getTodayDate(): string {
 		const today = new Date();
 		today.setDate(today.getDate() + 1); // Tomorrow as minimum date
-		return today.toISOString().split('T')[0];
+		return today.toDateString();
 	}
 
 	function getInstallmentFrequencyText(plan: string): string {
@@ -127,14 +128,13 @@
 	<!-- One-time Payment Fields -->
 	{#if paymentType === 'one_time'}
 		<div class="animate-fade-in">
-			<label for="due-date" class="label">Due Date *</label>
-			<input
+			<DatePicker
 				id="due-date"
-				type="date"
 				bind:value={dueDate}
-				min={getTodayDate()}
-				class="input"
-				required
+				label="Due Date"
+				placeholder="Select due date"
+				required={true}
+				minDate={getTodayDate()}
 			/>
 			<p class="mt-1 text-sm text-muted-foreground">
 				The date when the full amount is due
@@ -177,14 +177,13 @@
 
 			<!-- First Payment Due Date -->
 			<div>
-				<label for="first-due-date" class="label">First Payment Due Date *</label>
-				<input
+				<DatePicker
 					id="first-due-date"
-					type="date"
 					bind:value={dueDate}
-					min={getTodayDate()}
-					class="input"
-					required
+					label="First Payment Due Date"
+					placeholder="Select first payment date"
+					required={true}
+					minDate={getTodayDate()}
 				/>
 				<p class="mt-1 text-sm text-muted-foreground">
 					Date of the first installment payment

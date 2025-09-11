@@ -2,6 +2,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { apiClient, type Payment } from '../api';
 	import ReceiptPhotoViewer from './ReceiptPhotoViewer.svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	export let debt: any;
 
@@ -182,9 +183,9 @@
 	}
 
 	async function handleAddPayment() {
+		console.log('Creating payment:', newPayment);
 		if (parseFloat(newPayment.amount) > 0 && newPayment.payment_date) {
 			try {
-				console.log('Creating payment:', newPayment);
 				// Create the payment via API
 				const payment = await apiClient.createPayment(debt.id, {
 					amount: newPayment.amount,
@@ -419,11 +420,10 @@
 									/>
 								</div>
 								<div>
-									<label class="label">Payment Date</label>
-									<input 
-										type="date" 
-										bind:value={newPayment.payment_date} 
-										class="input"
+									<DatePicker
+										bind:value={newPayment.payment_date}
+										label="Payment Date"
+										placeholder="Select payment date"
 									/>
 								</div>
 								<div>

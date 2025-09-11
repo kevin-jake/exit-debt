@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import DatePicker from './DatePicker.svelte';
 
 	export let debt: any;
 
@@ -7,12 +8,12 @@
 
 	// Form data with current debt values
 	let formData = {
-		totalAmount: debt.totalAmount.toString(),
-		currency: debt.currency,
+		totalAmount: debt.total_amount?.toString() || debt.totalAmount?.toString() || '',
+		currency: debt.currency || '',
 		description: debt.description || '',
-		dueDate: debt.dueDate,
-		installmentPlan: debt.installmentPlan,
-		numberOfPayments: debt.numberOfPayments || 1,
+		dueDate: debt.due_date || debt.dueDate || '',
+		installmentPlan: debt.installment_plan || debt.installmentPlan || 'one_time',
+		numberOfPayments: debt.number_of_payments || debt.numberOfPayments || 1,
 		notes: debt.notes || ''
 	};
 
@@ -34,7 +35,7 @@
 		? parseFloat(formData.totalAmount) / formData.numberOfPayments 
 		: 0;
 
-	$: isInstallmentPlan = debt.installmentPlan !== 'one_time';
+	$: isInstallmentPlan = (debt.installment_plan || debt.installmentPlan) !== 'one_time';
 
 	onMount(() => {
 		// Prevent body scroll when modal is open
@@ -109,15 +110,15 @@
 			// Mock successful debt update
 			const updatedDebt = {
 				...debt,
-				totalAmount: parseFloat(formData.totalAmount),
+				total_amount: formData.totalAmount,
 				currency: formData.currency,
 				description: formData.description,
-				dueDate: formData.dueDate,
-				installmentPlan: formData.installmentPlan,
-				numberOfPayments: isInstallmentPlan ? formData.numberOfPayments : 1,
+				due_date: formData.dueDate,
+				installment_plan: formData.installmentPlan,
+				number_of_payments: isInstallmentPlan ? formData.numberOfPayments : 1,
 				notes: formData.notes,
-				remainingBalance: calculateRemainingBalance(),
-				updatedAt: new Date().toISOString()
+				total_remaining_debt: calculateRemainingBalance().toString(),
+				updated_at: new Date().toISOString()
 			};
 
 			dispatch('debt-updated', updatedDebt);
@@ -133,7 +134,12 @@
 	function calculateRemainingBalance(): number {
 		// In a real app, this would calculate based on payments made
 		// For now, we'll maintain the same ratio
-		const originalRatio = debt.remainingBalance / debt.totalAmount;
+		const totalAmount = debt.total_amount || debt.totalAmount;
+		const remainingDebt = debt.total_remaining_debt || debt.remainingBalance;
+		
+		if (!totalAmount) return 0;
+		
+		const originalRatio = remainingDebt ? parseFloat(remainingDebt.toString()) / parseFloat(totalAmount.toString()) : 1;
 		return parseFloat(formData.totalAmount) * originalRatio;
 	}
 
@@ -222,14 +228,14 @@
 			<div class="flex items-center justify-between">
 				<div>
 					<h2 class="text-xl font-semibold text-foreground">
-						Edit Debt: {debt.description || `${debt.type === 'owed_to_me' ? 'Money owed by' : 'Money owed to'} ${debt.contactName}`}
+						Edit Debt: {debt.description || `${(debt.debt_type === 'owed_to_me' || debt.type === 'owed_to_me') ? 'Money owed by' : 'Money owed to'} ${debt.contactName || debt.contact?.name || 'Unknown Contact'}`}
 					</h2>
 					<div class="flex items-center space-x-3 mt-1">
 						<span class="text-sm text-muted-foreground">
-							{debt.type === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
+							{(debt.debt_type === 'owed_to_me' || debt.type === 'owed_to_me') ? 'Owed to Me' : 'I Owe'}
 						</span>
-						<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getStatusBadgeClass(debt.status)}">
-							{debt.status.charAt(0).toUpperCase() + debt.status.slice(1)}
+						<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getStatusBadgeClass(debt.status || 'active')}">
+							{(debt.status || 'active').charAt(0).toUpperCase() + (debt.status || 'active').slice(1)}
 						</span>
 												</div>
 						</div>
@@ -267,11 +273,11 @@
 					<div class="flex items-center space-x-3">
 						<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
 							<span class="text-primary-foreground text-sm font-medium">
-								{debt.contactName.split(' ').map((n: string) => n[0]).join('')}
+								{(debt.contactName || debt.contact?.name || 'Unknown').split(' ').map((n: string) => n[0]).join('')}
 							</span>
 						</div>
 						<div>
-							<div class="font-medium text-foreground">{debt.contactName}</div>
+							<div class="font-medium text-foreground">{debt.contactName || debt.contact?.name || 'Unknown Contact'}</div>
 							<div class="text-sm text-muted-foreground">Contact cannot be changed after debt creation</div>
 						</div>
 					</div>
@@ -285,8 +291,8 @@
 					<div class="bg-muted/50 rounded-lg p-4">
 						<div class="block text-sm font-medium text-muted-foreground mb-2">Debt Type</div>
 						<div class="flex items-center justify-between">
-							<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {debt.type === 'owed_to_me' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
-								{debt.type === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
+							<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {(debt.debt_type === 'owed_to_me' || debt.type === 'owed_to_me') ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
+								{(debt.debt_type === 'owed_to_me' || debt.type === 'owed_to_me') ? 'Owed to Me' : 'I Owe'}
 							</span>
 							<span class="text-sm text-muted-foreground">Debt type cannot be changed after creation</span>
 						</div>
@@ -437,20 +443,15 @@
 
 					<!-- Due Date -->
 					<div>
-						<label for="due-date" class="label">
-							{isInstallmentPlan ? 'Next Payment Due Date' : 'Due Date'} *
-						</label>
-						<input
+						<DatePicker
 							id="due-date"
-							type="date"
 							bind:value={formData.dueDate}
-							class="input {errors.dueDate ? 'border-destructive focus:border-destructive focus:ring-destructive' : ''} {formData.dueDate !== originalData.dueDate ? 'border-warning' : ''}"
+							label={isInstallmentPlan ? 'Next Payment Due Date' : 'Due Date'}
+							placeholder="Select due date"
+							required={true}
+							error={errors.dueDate}
 							disabled={isLoading}
-							required
 						/>
-						{#if errors.dueDate}
-							<p class="mt-1 text-sm text-destructive">{errors.dueDate}</p>
-						{/if}
 					</div>
 				</div>
 

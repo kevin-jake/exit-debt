@@ -1,28 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { apiClient, type DebtList } from '../api';
+	import { debtsStore, type Debt } from '../stores/debts';
 	import DebtDetailsModal from './DebtDetailsModal.svelte';
 	import EditDebtListModal from './EditDebtListModal.svelte';
 	import DeleteDebtListModal from './DeleteDebtListModal.svelte';
 
-	// Extended debt interface for display purposes
-	type Debt = DebtList & {
-		contactName: string;
-		remainingBalance: number;
-		status: 'active' | 'settled' | 'archived' | 'overdue';
-		dueDate: string;
-		nextPayment: string;
-	};
-
-	let debts: Debt[] = [];
 	let filteredDebts: Debt[] = [];
 	let selectedDebt: Debt | null = null;
 	let showDetailsModal = false;
 	let showEditModal = false;
 	let showDeleteDialog = false;
 	let debtToDelete: Debt | null = null;
-	let isLoading = false;
-	let error: string | null = null;
 
 	// Filter and search state
 	let searchQuery = '';
@@ -37,52 +26,10 @@
 	let totalPages = 1;
 
 	onMount(() => {
-		loadDebts();
+		debtsStore.loadDebts();
 	});
 
-	async function loadDebts() {
-		isLoading = true;
-		error = null;
-		
-		try {
-			// Load debts from backend (contacts are already included)
-			const debtLists = await apiClient.getDebtLists();
-			
-			// Transform debt lists to include contact names and calculate derived fields
-			debts = debtLists.map(debtList => {
-				// Use contact information from the debt response
-				const contactName = debtList.contact?.name || 'Unknown Contact';
-				
-				// Use actual remaining balance from backend
-				const remainingBalance = parseFloat(debtList.total_remaining_debt || debtList.total_amount);
-				
-				// Use actual status from backend
-				const status = debtList.status as 'active' | 'settled' | 'archived' | 'overdue' || 'active';
-				
-				// Use actual due date from backend
-				const dueDate = debtList.due_date || debtList.created_at;
-				const nextPayment = debtList.next_payment_date || debtList.created_at;
-
-				return {
-					...debtList,
-					contactName,
-					remainingBalance,
-					status,
-					dueDate,
-					nextPayment,
-				};
-			});
-			
-			filterAndSortDebts();
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to load debts';
-			console.error('Error loading debts:', err);
-		} finally {
-			isLoading = false;
-		}
-	}
-
-	function filterAndSortDebts() {
+	function filterAndSortDebts(debts: Debt[]) {
 		let filtered = [...debts]; // Create a copy to avoid mutating the original array
 
 		// Apply search filter
@@ -160,7 +107,7 @@
 			sortBy = column;
 			sortOrder = 'asc';
 		}
-		filterAndSortDebts();
+		// We'll trigger filtering through the reactive statement
 	}
 
 	function formatCurrency(amount: number | string, currency: string = 'PHP'): string {
@@ -244,13 +191,10 @@
 	async function deleteDebt() {
 		if (debtToDelete) {
 			try {
-				await apiClient.deleteDebtList(debtToDelete.id);
-				debts = debts.filter(d => d.id !== debtToDelete?.id);
-				filterAndSortDebts();
+				await debtsStore.deleteDebt(debtToDelete.id);
 				debtToDelete = null;
 				showDeleteDialog = false;
 			} catch (err) {
-				error = err instanceof Error ? err.message : 'Failed to delete debt';
 				console.error('Error deleting debt:', err);
 			}
 		}
@@ -259,35 +203,24 @@
 	async function markAsSettled(debt: Debt) {
 		try {
 			// Update the debt status to settled
-			const updatedDebt = await apiClient.updateDebtList(debt.id, {
+			const updatedDebt = await debtsStore.updateDebt(debt.id, {
 				// Note: The backend might not have a status field, so we'll handle this differently
 				// For now, we'll just update the local state
 			});
-			
-			const index = debts.findIndex(d => d.id === debt.id);
-			if (index !== -1) {
-				debts[index] = { ...debt, status: 'settled', remainingBalance: 0 };
-				filterAndSortDebts();
-			}
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'Failed to mark debt as settled';
 			console.error('Error marking debt as settled:', err);
 		}
 	}
 
 	function handleDebtUpdated(event: CustomEvent) {
 		const updatedDebt = event.detail;
-		const index = debts.findIndex(d => d.id === updatedDebt.id);
-		if (index !== -1) {
-			debts[index] = updatedDebt;
-			filterAndSortDebts();
-		}
+		// The store will handle updating the debt
 		showEditModal = false;
 	}
 
-	// Initialize filteredDebts when debts change
-	$: if (debts.length > 0) {
-		filterAndSortDebts();
+	// React to store changes and filter changes
+	$: if ($debtsStore.debts.length > 0) {
+		filterAndSortDebts($debtsStore.debts);
 	} else {
 		filteredDebts = [];
 		totalPages = 1;
@@ -295,8 +228,8 @@
 	}
 
 	// React to filter changes
-	$: if (searchQuery || statusFilter || typeFilter || sortBy || sortOrder) {
-		filterAndSortDebts();
+	$: if ($debtsStore.debts.length > 0 && (searchQuery || statusFilter || typeFilter || sortBy || sortOrder)) {
+		filterAndSortDebts($debtsStore.debts);
 	}
 
 	$: paginatedDebts = filteredDebts.slice(
@@ -308,7 +241,7 @@
 
 <div class="space-y-6">
 	<!-- Loading State -->
-	{#if isLoading}
+	{#if $debtsStore.isLoading}
 		<div class="flex items-center justify-center py-12">
 			<div class="flex items-center space-x-2">
 				<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
@@ -318,7 +251,7 @@
 	{/if}
 
 	<!-- Error State -->
-	{#if error && !isLoading}
+	{#if $debtsStore.error && !$debtsStore.isLoading}
 		<div class="card p-4 bg-destructive/10 border border-destructive/20">
 			<div class="flex items-center space-x-2">
 				<svg class="w-5 h-5 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,13 +259,13 @@
 				</svg>
 				<span class="text-destructive font-medium">Error loading debts</span>
 			</div>
-			<p class="text-destructive/80 mt-1">{error}</p>
-			<button on:click={loadDebts} class="btn-secondary mt-3">Try Again</button>
+			<p class="text-destructive/80 mt-1">{$debtsStore.error}</p>
+			<button on:click={() => debtsStore.loadDebts()} class="btn-secondary mt-3">Try Again</button>
 		</div>
 	{/if}
 
 	<!-- Main Content -->
-	{#if !isLoading && !error}
+	{#if !$debtsStore.isLoading && !$debtsStore.error}
 		<!-- Header with Search and Filters -->
 		<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
 			<div class="flex-1 max-w-md">

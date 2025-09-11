@@ -3,14 +3,8 @@
 	import { goto } from '$app/navigation';
 	import ContactSelector from './ContactSelector.svelte';
 	import PaymentScheduleSection from './PaymentScheduleSection.svelte';
-
-	type Contact = {
-		id: number;
-		name: string;
-		email: string | null;
-		phone: string | null;
-		createdAt: string;
-	};
+	import { apiClient, type Contact, type CreateDebtListRequest } from '../api';
+	import { debtsStore } from '../stores/debts';
 
 	// Form data
 	let formData = {
@@ -39,38 +33,13 @@
 		loadContacts();
 	});
 
-	function loadContacts() {
-		// Mock contacts data - replace with actual API call
-		contacts = [
-			{
-				id: 1,
-				name: 'Alice Johnson',
-				email: 'alice@example.com',
-				phone: '+63 917 123 4567',
-				createdAt: '2023-12-01'
-			},
-			{
-				id: 2,
-				name: 'Bob Smith',
-				email: 'bob.smith@example.com',
-				phone: '+63 917 234 5678',
-				createdAt: '2023-11-15'
-			},
-			{
-				id: 3,
-				name: 'Carol Davis',
-				email: 'carol.davis@example.com',
-				phone: null,
-				createdAt: '2023-10-20'
-			},
-			{
-				id: 4,
-				name: 'David Wilson',
-				email: null,
-				phone: '+63 917 345 6789',
-				createdAt: '2024-01-01'
-			}
-		];
+	async function loadContacts() {
+		try {
+			contacts = await apiClient.getContacts();
+		} catch (error) {
+			console.error('Error loading contacts:', error);
+			errors.general = 'Failed to load contacts. Please try again.';
+		}
 	}
 
 	function validateForm(): boolean {
@@ -132,27 +101,21 @@
 		isLoading = true;
 
 		try {
-			// TODO: Replace with actual API call
-			await new Promise(resolve => setTimeout(resolve, 2000));
-
-			// Mock successful debt creation
-			const newDebt = {
-				id: Date.now(),
-				type: formData.debtType,
-				contactId: formData.contact!.id,
-				contactName: formData.contact!.name,
-				totalAmount: parseFloat(formData.totalAmount),
-				remainingBalance: parseFloat(formData.totalAmount),
-				status: 'active',
-				dueDate: formData.dueDate,
-				installmentPlan: formData.paymentType === 'installment' ? formData.installmentPlan : 'one_time',
-				numberOfPayments: formData.paymentType === 'installment' ? formData.numberOfPayments : 1,
-				nextPayment: formData.dueDate,
+			// Prepare the debt data for the API
+			const debtData: CreateDebtListRequest = {
+				contact_id: formData.contact!.id,
+				total_amount: formData.totalAmount.toString(),
 				currency: formData.currency,
-				description: formData.description,
-				notes: formData.notes,
-				createdAt: new Date().toISOString()
+				debt_type: formData.debtType,
+				installment_plan: formData.paymentType === 'installment' ? formData.installmentPlan : 'one_time',
+				due_date: formData.dueDate || undefined,
+				number_of_payments: formData.paymentType === 'installment' ? formData.numberOfPayments : undefined,
+				description: formData.description || undefined,
+				notes: formData.notes || undefined,
 			};
+
+			// Create the debt using the store
+			const newDebt = await debtsStore.createDebt(debtData);
 
 			console.log('Created debt:', newDebt);
 

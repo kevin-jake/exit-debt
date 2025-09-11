@@ -109,6 +109,8 @@ export interface CreateDebtListRequest {
   currency: string;
   debt_type: string;
   installment_plan: string;
+  due_date?: string;
+  number_of_payments?: number;
   description?: string;
   notes?: string;
 }
@@ -498,32 +500,48 @@ class ApiClient {
 
   async createDebtList(debtData: CreateDebtListRequest): Promise<DebtList> {
     const response = await this.request<{
-      id: string;
-      contact_id: string;
-      total_amount: string;
-      currency: string;
-      debt_type: string;
-      installment_plan: string;
-      description?: string;
-      notes?: string;
-      created_at: string;
-      updated_at: string;
+      ID: string;
+      UserID: string;
+      ContactID: string;
+      DebtType: string;
+      TotalAmount: string;
+      InstallmentAmount: string;
+      TotalPaymentsMade: string;
+      TotalRemainingDebt: string;
+      Currency: string;
+      Status: string;
+      DueDate: string;
+      NextPaymentDate: string;
+      InstallmentPlan: string;
+      NumberOfPayments: number;
+      Description?: string;
+      Notes?: string;
+      CreatedAt: string;
+      UpdatedAt: string;
     }>("/debts", {
       method: "POST",
       body: JSON.stringify(debtData),
     });
 
     return {
-      id: response.id,
-      contact_id: response.contact_id,
-      total_amount: response.total_amount,
-      currency: response.currency,
-      debt_type: response.debt_type,
-      installment_plan: response.installment_plan,
-      description: response.description,
-      notes: response.notes,
-      created_at: response.created_at,
-      updated_at: response.updated_at,
+      id: response.ID,
+      contact_id: response.ContactID,
+      total_amount: response.TotalAmount,
+      currency: response.Currency,
+      debt_type: response.DebtType,
+      installment_plan: response.InstallmentPlan,
+      description: response.Description,
+      notes: response.Notes,
+      created_at: response.CreatedAt,
+      updated_at: response.UpdatedAt,
+      // Additional fields from backend response
+      installment_amount: response.InstallmentAmount,
+      total_payments_made: response.TotalPaymentsMade,
+      total_remaining_debt: response.TotalRemainingDebt,
+      status: response.Status,
+      due_date: response.DueDate,
+      next_payment_date: response.NextPaymentDate,
+      number_of_payments: response.NumberOfPayments,
     };
   }
 
