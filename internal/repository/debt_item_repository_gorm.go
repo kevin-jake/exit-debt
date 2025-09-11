@@ -162,7 +162,8 @@ func (r *debtItemRepositoryGORM) GetPendingVerifications(ctx context.Context, us
 	var gormDebtItems []models.DebtItem
 	if err := r.db.WithContext(ctx).
 		Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
-		Where("debt_lists.user_id = ? AND debt_items.status = ?", userID, "pending").
+		Joins("LEFT JOIN contacts ON debt_lists.contact_id = contacts.id").
+		Where("((debt_lists.user_id = ? AND debt_lists.debt_type = ?) OR (contacts.user_id_ref = ? AND debt_lists.debt_type = ?)) AND debt_items.status = ?", userID, "owed_to_me", userID, "i_owe", "pending").
 		Order("debt_items.created_at DESC").
 		Find(&gormDebtItems).Error; err != nil {
 		return nil, fmt.Errorf("failed to get pending verifications: %w", err)
