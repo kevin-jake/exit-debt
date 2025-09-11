@@ -468,6 +468,26 @@ func (s *debtService) GetDebtItem(ctx context.Context, id uuid.UUID, userID uuid
 	return debtItem, nil
 }
 
+// GetDebtItemForVerification gets a debt item for verification purposes
+// Only allows verification if the user is the one who should verify (debt_type = "owed_to_me")
+func (s *debtService) GetDebtItemForVerification(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtItem, error) {
+	// Check if user can verify this debt item
+	canVerify, err := s.debtItemRepo.CanUserVerifyDebtItem(ctx, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify permission: %w", err)
+	}
+	if !canVerify {
+		return nil, entities.ErrDebtItemNotFound
+	}
+
+	debtItem, err := s.debtItemRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get debt item: %w", err)
+	}
+
+	return debtItem, nil
+}
+
 func (s *debtService) GetDebtListItems(ctx context.Context, debtListID uuid.UUID, userID uuid.UUID) ([]entities.DebtItem, error) {
 	// First check if debt list belongs to user (user is the owner)
 	belongs, err := s.debtListRepo.BelongsToUser(ctx, debtListID, userID)
@@ -782,8 +802,8 @@ func (s *debtService) GetTotalPaymentsForDebtList(ctx context.Context, debtListI
 // Payment verification operations
 
 func (s *debtService) VerifyDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.VerifyDebtItemRequest) (*entities.DebtItem, error) {
-	// Get the debt item to check if it exists and get the debt list ID
-	debtItem, err := s.GetDebtItem(ctx, id, userID)
+	// Get the debt item to check if it exists and user can verify it
+	debtItem, err := s.GetDebtItemForVerification(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -794,7 +814,7 @@ func (s *debtService) VerifyDebtItem(ctx context.Context, id uuid.UUID, userID u
 	}
 
 	// Get the updated debt item
-	updatedDebtItem, err := s.GetDebtItem(ctx, id, userID)
+	updatedDebtItem, err := s.GetDebtItemForVerification(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -814,8 +834,8 @@ func (s *debtService) GetPendingVerifications(ctx context.Context, userID uuid.U
 }
 
 func (s *debtService) RejectDebtItem(ctx context.Context, id uuid.UUID, userID uuid.UUID, notes *string) (*entities.DebtItem, error) {
-	// Check if the debt item exists and belongs to the user
-	_, err := s.GetDebtItem(ctx, id, userID)
+	// Check if the debt item exists and user can verify it
+	_, err := s.GetDebtItemForVerification(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -826,7 +846,7 @@ func (s *debtService) RejectDebtItem(ctx context.Context, id uuid.UUID, userID u
 	}
 
 	// Get the updated debt item
-	updatedDebtItem, err := s.GetDebtItem(ctx, id, userID)
+	updatedDebtItem, err := s.GetDebtItemForVerification(ctx, id, userID)
 	if err != nil {
 		return nil, err
 	}

@@ -163,7 +163,7 @@
 
 	function getInstallmentText(plan: string): string {
 		const plans = {
-			'one_time': 'One-time',
+			'onetime': 'One-time',
 			'weekly': 'Weekly',
 			'biweekly': 'Bi-weekly',
 			'monthly': 'Monthly',

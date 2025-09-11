@@ -10,6 +10,7 @@
 	let isLoading = true;
 	let hasError = false;
 	let authenticatedPhotoUrl = '';
+	let hasNoPhoto = false;
 
 	onMount(() => {
 		// Prevent body scroll when modal is open
@@ -23,7 +24,14 @@
 
 	// Alternative approach: use a more reliable image loading method with auth
 	async function loadImage() {
-		if (!photoUrl) return;
+		if (!photoUrl || photoUrl.trim() === '') {
+			isLoading = false;
+			hasError = false;
+			hasNoPhoto = true;
+			return;
+		}
+		console.log('photoUrl', photoUrl);
+		hasNoPhoto = false;
 		
 		try {
 			// Try to get authenticated URL first
@@ -89,6 +97,7 @@
 		// Reset state when modal closes
 		isLoading = false;
 		hasError = false;
+		hasNoPhoto = false;
 		authenticatedPhotoUrl = '';
 	}
 
@@ -158,8 +167,21 @@
 				</div>
 			{/if}
 
+			<!-- No Photo State -->
+			{#if hasNoPhoto}
+				<div class="flex flex-col items-center space-y-4 text-center">
+					<svg class="w-24 h-24 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+					</svg>
+					<div class="space-y-2">
+						<h3 class="text-white text-xl font-semibold">No Receipt Photo</h3>
+						<p class="text-white/80">No receipt photo is available for this payment.</p>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Image Display -->
-			{#if !isLoading && !hasError && authenticatedPhotoUrl}
+			{#if !isLoading && !hasError && !hasNoPhoto && authenticatedPhotoUrl}
 				<img
 					src={authenticatedPhotoUrl}
 					alt="Receipt photo"

@@ -38,6 +38,7 @@ type DebtItemRepository interface {
 	GetCompletedPaymentsForDebtList(ctx context.Context, debtListID uuid.UUID) ([]entities.DebtItem, error)
 	GetLastPaymentDate(ctx context.Context, debtListID uuid.UUID) (*time.Time, error)
 	BelongsToUserDebtList(ctx context.Context, debtItemID, userID uuid.UUID) (bool, error)
+	CanUserVerifyDebtItem(ctx context.Context, debtItemID, userID uuid.UUID) (bool, error)
 	
 	// Verification methods
 	GetPendingVerifications(ctx context.Context, userID uuid.UUID) ([]entities.DebtItem, error)

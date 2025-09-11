@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import DatePicker from './DatePicker.svelte';
 
-	export let paymentType: 'one_time' | 'installment' = 'one_time';
+	export let paymentType: 'onetime' | 'installment' = 'onetime';
 	export let dueDate: string = '';
 	export let installmentPlan: string = 'monthly';
 	export let numberOfPayments: number = 1;
@@ -101,7 +101,7 @@
 				<input
 					type="radio"
 					bind:group={paymentType}
-					value="one_time"
+					value="onetime"
 					class="w-4 h-4 text-primary focus:ring-primary border-border"
 				/>
 				<div class="flex-1">
@@ -126,7 +126,7 @@
 	</div>
 
 	<!-- One-time Payment Fields -->
-	{#if paymentType === 'one_time'}
+	{#if paymentType === 'onetime'}
 		<div class="animate-fade-in">
 			<DatePicker
 				id="due-date"

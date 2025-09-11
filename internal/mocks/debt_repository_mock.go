@@ -140,6 +140,11 @@ func (m *MockDebtItemRepository) BelongsToUserDebtList(ctx context.Context, debt
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockDebtItemRepository) CanUserVerifyDebtItem(ctx context.Context, debtItemID uuid.UUID, userID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, debtItemID, userID)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockDebtItemRepository) GetCompletedPaymentsForDebtList(ctx context.Context, debtListID uuid.UUID) ([]entities.DebtItem, error) {
 	args := m.Called(ctx, debtListID)
 	if args.Get(0) == nil {

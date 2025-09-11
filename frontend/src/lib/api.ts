@@ -675,7 +675,7 @@ class ApiClient {
       payment_method: payment.PaymentMethod,
       description: payment.Description,
       status: payment.Status,
-      receipt_photo_url: `${this.baseUrl.replace("/api/v1", "")}${payment.ReceiptPhotoURL}`,
+      receipt_photo_url: `${payment.ReceiptPhotoURL ? this.baseUrl.replace("/api/v1", "") + payment.ReceiptPhotoURL : ""}`,
       verified_by: payment.VerifiedBy,
       verified_at: payment.VerifiedAt,
       verification_notes: payment.VerificationNotes,
@@ -687,12 +687,18 @@ class ApiClient {
   async verifyPayment(paymentId: string): Promise<void> {
     return this.request<void>(`/debts/payments/${paymentId}/verify`, {
       method: "POST",
+      body: JSON.stringify({
+        status: "completed",
+      }),
     });
   }
 
   async rejectPayment(paymentId: string): Promise<void> {
     return this.request<void>(`/debts/payments/${paymentId}/reject`, {
       method: "POST",
+      body: JSON.stringify({
+        status: "rejected",
+      }),
     });
   }
 

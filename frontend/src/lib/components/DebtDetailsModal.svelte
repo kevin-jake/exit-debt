@@ -33,6 +33,17 @@
 	// Reactive statement to trigger UI updates when image cache changes
 	$: imageCacheVersion; // This will trigger reactivity when the cache is updated
 
+	// Reactive financial calculations based on payments
+	$: totalPaidAmount = payments
+		.filter(payment => payment.status === 'verified' || payment.status === 'completed')
+		.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+
+	$: remainingBalance = parseFloat(debt.total_amount) - totalPaidAmount;
+
+	$: paymentProgress = parseFloat(debt.total_amount) > 0 
+		? Math.round((totalPaidAmount / parseFloat(debt.total_amount)) * 100)
+		: 100;
+
 	// Function to load authenticated URLs for all payments
 	async function loadAuthenticatedImages() {
 		if (payments.length === 0) return;
@@ -212,7 +223,7 @@
 
 	function getInstallmentText(plan: string): string {
 		const plans = {
-			'one_time': 'One-time',
+			'onetime': 'One-time',
 			'weekly': 'Weekly',
 			'biweekly': 'Bi-weekly',
 			'monthly': 'Monthly',
@@ -222,19 +233,14 @@
 		return plans[plan as keyof typeof plans] || plan;
 	}
 
-	function calculateProgress(): number {
-		const totalAmount = parseFloat(debt.total_amount);
-		if (totalAmount === 0) return 100;
-		const paid = totalAmount - debt.remainingBalance;
-		return Math.round((paid / totalAmount) * 100);
-	}
 
 	async function handleAddPayment() {
 		console.log('Creating payment:', newPayment);
 		if (parseFloat(newPayment.amount) > 0 && newPayment.payment_date) {
 			try {
 				// Convert date to proper datetime format for backend
-				const paymentDate = new Date(newPayment.payment_date);
+				// The backend expects format: 2006-01-02T15:04:05Z07:00
+				const paymentDate = new Date(newPayment.payment_date + 'T00:00:00');
 				const formattedPaymentDate = paymentDate.toISOString();
 				
 				// Create the payment via API
@@ -284,6 +290,19 @@
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to verify payment';
 			console.error('Error verifying payment:', err);
+		}
+	}
+
+	async function rejectPayment(paymentId: string) {
+		try {
+			console.log('Rejecting payment:', paymentId);
+			await apiClient.rejectPayment(paymentId);
+			console.log('Payment rejected successfully');
+			// Reload payments to get updated data
+			await loadPayments();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to reject payment';
+			console.error('Error rejecting payment:', err);
 		}
 	}
 
@@ -388,15 +407,19 @@
 						<div>
 							<h3 class="text-lg font-medium text-foreground mb-4">Financial Details</h3>
 							<div class="space-y-4">
-								<div class="grid grid-cols-2 gap-4">
+								<div class="grid grid-cols-3 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Total Amount</label>
 										<div class="text-lg font-semibold text-foreground">{formatCurrency(debt.total_amount, debt.currency)}</div>
 									</div>
 									<div>
+										<label class="block text-sm font-medium text-muted-foreground mb-1">Total Paid</label>
+										<div class="text-lg font-semibold text-success">{formatCurrency(totalPaidAmount, debt.currency)}</div>
+									</div>
+									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Remaining Balance</label>
-										<div class="text-lg font-semibold {debt.remainingBalance > 0 ? 'text-warning' : 'text-success'}">
-											{formatCurrency(debt.remainingBalance, debt.currency)}
+										<div class="text-lg font-semibold {remainingBalance > 0 ? 'text-warning' : 'text-success'}">
+											{formatCurrency(remainingBalance, debt.currency)}
 										</div>
 									</div>
 								</div>
@@ -406,10 +429,10 @@
 									<div class="w-full bg-muted rounded-full h-2">
 										<div 
 											class="bg-primary h-2 rounded-full transition-all duration-300" 
-											style="width: {calculateProgress()}%"
+											style="width: {paymentProgress}%"
 										></div>
 									</div>
-									<div class="text-sm text-muted-foreground mt-1">{calculateProgress()}% paid</div>
+									<div class="text-sm text-muted-foreground mt-1">{paymentProgress}% paid</div>
 								</div>
 
 								<div class="grid grid-cols-2 gap-4">
@@ -624,16 +647,30 @@
 												{#if debt.debt_type === 'owed_to_me'}
 													<td class="px-4 py-3">
 														{#if payment.status !== 'verified' && payment.status !== 'completed'}
-															<button 
-																on:click={() => verifyPayment(payment.id)}
-																class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-																title={payment.status === 'rejected' ? 'Reverify payment' : 'Verify payment'}
-															>
-																<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																	<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-																</svg>
-																{payment.status === 'rejected' ? 'Reverify' : 'Verify'}
-															</button>
+															<div class="flex items-center space-x-2">
+																<button 
+																	on:click={() => verifyPayment(payment.id)}
+																	class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+																	title={payment.status === 'rejected' ? 'Reverify payment' : 'Verify payment'}
+																>
+																	<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+																	</svg>
+																	{payment.status === 'rejected' ? 'Reverify' : 'Verify'}
+																</button>
+																{#if payment.status !== 'rejected'}
+																	<button 
+																		on:click={() => rejectPayment(payment.id)}
+																		class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+																		title="Reject payment"
+																	>
+																		<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+																		</svg>
+																		Reject
+																	</button>
+																{/if}
+															</div>
 														{:else}
 															<span class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-green-100 text-green-700">
 																<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

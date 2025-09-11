@@ -12,7 +12,7 @@
 		currency: debt.currency || '',
 		description: debt.description || '',
 		dueDate: debt.due_date || debt.dueDate || '',
-		installmentPlan: debt.installment_plan || debt.installmentPlan || 'one_time',
+		installmentPlan: debt.installment_plan || debt.installmentPlan || 'onetime',
 		numberOfPayments: debt.number_of_payments || debt.numberOfPayments || 1,
 		notes: debt.notes || ''
 	};
@@ -35,7 +35,7 @@
 		? parseFloat(formData.totalAmount) / formData.numberOfPayments 
 		: 0;
 
-	$: isInstallmentPlan = (debt.installment_plan || debt.installmentPlan) !== 'one_time';
+	$: isInstallmentPlan = (debt.installment_plan || debt.installmentPlan) !== 'onetime';
 
 	onMount(() => {
 		// Prevent body scroll when modal is open
@@ -113,7 +113,7 @@
 				total_amount: formData.totalAmount,
 				currency: formData.currency,
 				description: formData.description,
-				due_date: formData.dueDate,
+				due_date: formData.dueDate ? new Date(formData.dueDate + 'T00:00:00').toISOString() : debt.due_date,
 				installment_plan: formData.installmentPlan,
 				number_of_payments: isInstallmentPlan ? formData.numberOfPayments : 1,
 				notes: formData.notes,

@@ -28,7 +28,7 @@
 		// Mock data - replace with actual API call
 		// In real app, fetch payment history count and remaining payments
 		paymentCount = Math.floor(Math.random() * 10) + 1;
-		if (debt.installmentPlan !== 'one_time') {
+		if (debt.installmentPlan !== 'onetime') {
 			remainingPayments = Math.max(0, debt.numberOfPayments - paymentCount);
 		}
 	}

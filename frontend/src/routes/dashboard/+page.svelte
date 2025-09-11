@@ -193,7 +193,7 @@
 			remainingBalance: debtList.total_amount, // Assuming no payments made yet
 			status: 'active' as const, // Default status
 			dueDate: debtList.due_date,
-			installmentPlan: 'one_time' as const, // Default to one-time
+			installmentPlan: 'onetime' as const, // Default to one-time
 			nextPayment: debtList.due_date,
 			currency: 'USD', // Default currency
 			description: debtList.description,
