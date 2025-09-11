@@ -907,7 +907,7 @@ func (h *DebtHandler) UploadReceipt(c *gin.Context) {
 	}
 
 	// Upload file to S3
-	photoURL, err := h.fileStorageService.UploadReceipt(ctx, file, header.Filename, header.Header.Get("Content-Type"))
+	photoURL, err := h.fileStorageService.UploadReceipt(ctx, file, header.Filename, header.Header.Get("Content-Type"), debtItemID)
 	if err != nil {
 		logger.Error().Err(err).Str("filename", header.Filename).Msg("Failed to upload receipt")
 		c.JSON(http.StatusInternalServerError, NewErrorResponse("Failed to upload receipt", "", requestID))
@@ -952,18 +952,26 @@ func (h *DebtHandler) GetReceiptPhoto(c *gin.Context) {
 		return
 	}
 
-	// Get the photo path from URL parameters
-	photoPath := c.Param("photo_path")
-	if photoPath == "" {
-		h.logger.Warn().Str("request_id", requestID).Msg("Photo path not provided")
-		c.JSON(http.StatusBadRequest, NewErrorResponse("Photo path is required", "", requestID))
+	// Get debt ID and filename from URL parameters
+	debtIDStr := c.Param("id")
+	debtID, err := uuid.Parse(debtIDStr)
+	if err != nil {
+		h.logger.Warn().Str("request_id", requestID).Str("debt_id", debtIDStr).Msg("Invalid debt ID format")
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid debt ID", "", requestID))
 		return
 	}
 
-	// Construct the full relative path
-	fullPath := fmt.Sprintf("/api/v1/receipts/%s", photoPath)
+	filename := c.Param("filename")
+	if filename == "" {
+		h.logger.Warn().Str("request_id", requestID).Msg("Filename not provided")
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Filename is required", "", requestID))
+		return
+	}
 
-	logger := h.logger.With().Str("request_id", requestID).Str("user_id", userUUID.String()).Str("photo_path", fullPath).Str("method", "GetReceiptPhoto").Logger()
+	// Construct the full API path
+	fullPath := fmt.Sprintf("/api/v1/debts/%s/receipts/%s", debtID.String(), filename)
+
+	logger := h.logger.With().Str("request_id", requestID).Str("user_id", userUUID.String()).Str("debt_id", debtID.String()).Str("filename", filename).Str("method", "GetReceiptPhoto").Logger()
 
 	// Get the file from S3
 	fileContent, contentType, err := h.fileStorageService.GetReceiptFile(c.Request.Context(), fullPath)

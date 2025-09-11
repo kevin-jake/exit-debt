@@ -113,6 +113,12 @@ func TestS3Service_ExtractKeyFromURL(t *testing.T) {
 		expectError bool
 	}{
 		{
+			name:        "valid API path format",
+			fileURL:     "/api/v1/debts/123e4567-e89b-12d3-a456-426614174000/receipts/20240115-143022-abc123.jpg",
+			expectKey:   "123e4567-e89b-12d3-a456-426614174000/receipts/20240115-143022-abc123.jpg",
+			expectError: false,
+		},
+		{
 			name:        "valid S3 URL",
 			fileURL:     "s3://my-bucket/receipts/2024/01/15/abc123.jpg",
 			expectKey:   "receipts/2024/01/15/abc123.jpg",
@@ -123,6 +129,16 @@ func TestS3Service_ExtractKeyFromURL(t *testing.T) {
 			fileURL:     "https://my-bucket.s3.us-east-1.amazonaws.com/receipts/2024/01/15/abc123.jpg",
 			expectKey:   "receipts/2024/01/15/abc123.jpg",
 			expectError: false,
+		},
+		{
+			name:        "invalid API path format - missing filename",
+			fileURL:     "/api/v1/debts/123e4567-e89b-12d3-a456-426614174000/receipts/",
+			expectError: true,
+		},
+		{
+			name:        "invalid API path format - invalid debt ID",
+			fileURL:     "/api/v1/debts/invalid-uuid/receipts/20240115-143022-abc123.jpg",
+			expectError: true,
 		},
 		{
 			name:        "invalid S3 URL format",

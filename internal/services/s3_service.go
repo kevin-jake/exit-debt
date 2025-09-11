@@ -78,29 +78,28 @@ func NewS3Service(cfg *config.Config, logger zerolog.Logger) (*S3Service, error)
 }
 
 // UploadReceipt uploads a receipt photo and returns the relative path
-func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string) (string, error) {
+func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string, debtID uuid.UUID) (string, error) {
 	// Validate file type
 	if !s.IsValidImageType(contentType) {
 		return "", fmt.Errorf("invalid file type: %s. Only images are allowed", contentType)
 	}
 
-	// Generate unique filename for S3 storage (with date structure for organization)
+	// Generate unique filename with timestamp and UUID
 	ext := filepath.Ext(filename)
 	uuidStr := uuid.New().String()
-	uniqueFilename := fmt.Sprintf("receipts/%s/%s%s", 
-		time.Now().Format("2006/01/02"), 
-		uuidStr, 
-		ext)
+	timestamp := time.Now().Format("20060102-150405") // YYYYMMDD-HHMMSS format
+	s3Key := fmt.Sprintf("%s/receipts/%s-%s%s", debtID.String(), timestamp, uuidStr, ext)
 
-	// Upload file to S3 with organized structure
+	// Upload file to S3
 	_, err := s.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucketName),
-		Key:         aws.String(uniqueFilename),
+		Key:         aws.String(s3Key),
 		Body:        file,
 		ContentType: aws.String(contentType),
 		Metadata: map[string]string{
 			"original-filename": filename,
 			"uploaded-at":       time.Now().Format(time.RFC3339),
+			"debt-id":           debtID.String(),
 		},
 	})
 	if err != nil {
@@ -108,30 +107,11 @@ func (s *S3Service) UploadReceipt(ctx context.Context, file io.Reader, filename 
 		return "", fmt.Errorf("failed to upload file to S3: %w", err)
 	}
 
-	// Also upload to a flat structure for easy API access
-	flatKey := fmt.Sprintf("receipts-flat/%s%s", uuidStr, ext)
-	_, err = s.s3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucketName),
-		Key:         aws.String(flatKey),
-		Body:        file,
-		ContentType: aws.String(contentType),
-		Metadata: map[string]string{
-			"original-filename": filename,
-			"uploaded-at":       time.Now().Format(time.RFC3339),
-			"organized-key":     uniqueFilename, // Reference to the organized structure
-		},
-	})
-	if err != nil {
-		s.logger.Error().Err(err).Msg("Failed to upload receipt to flat structure")
-		// Don't fail the entire operation, just log the error
-		s.logger.Warn().Err(err).Msg("Flat structure upload failed, but organized structure succeeded")
-	}
+	// Return API path format
+	apiPath := fmt.Sprintf("/api/v1/debts/%s/receipts/%s-%s%s", debtID.String(), timestamp, uuidStr, ext)
+	s.logger.Info().Str("s3_key", s3Key).Str("api_path", apiPath).Msg("Receipt uploaded successfully to S3")
 
-	// Return simplified relative path (without date directory structure)
-	simplePath := fmt.Sprintf("/api/v1/debts/receipts/%s%s", uuidStr, ext)
-	s.logger.Info().Str("filename", uniqueFilename).Str("relative_path", simplePath).Msg("Receipt uploaded successfully to S3")
-
-	return simplePath, nil
+	return apiPath, nil
 }
 
 // DeleteReceipt deletes a receipt photo from S3
@@ -142,39 +122,14 @@ func (s *S3Service) DeleteReceipt(ctx context.Context, fileURL string) error {
 		return fmt.Errorf("invalid S3 URL: %w", err)
 	}
 
-	// Delete object from flat structure
+	// Delete object from S3
 	_, err = s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucketName),
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		s.logger.Error().Err(err).Str("key", key).Msg("Failed to delete receipt from flat structure")
-		return fmt.Errorf("failed to delete file from flat structure: %w", err)
-	}
-
-	// Also try to delete from organized structure if it's a flat key
-	if strings.HasPrefix(key, "receipts-flat/") {
-		// Extract filename from flat key
-		filename := strings.TrimPrefix(key, "receipts-flat/")
-		
-		// Try to delete from organized structure (we'll try common date patterns)
-		possibleDates := []string{
-			time.Now().Format("2006/01/02"),
-			time.Now().AddDate(0, 0, -1).Format("2006/01/02"),
-			time.Now().AddDate(0, 0, -7).Format("2006/01/02"),
-		}
-		
-		for _, date := range possibleDates {
-			organizedKey := fmt.Sprintf("receipts/%s/%s", date, filename)
-			_, deleteErr := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(s.bucketName),
-				Key:    aws.String(organizedKey),
-			})
-			if deleteErr == nil {
-				s.logger.Info().Str("key", organizedKey).Msg("Deleted from organized structure")
-				break
-			}
-		}
+		s.logger.Error().Err(err).Str("key", key).Msg("Failed to delete receipt from S3")
+		return fmt.Errorf("failed to delete file from S3: %w", err)
 	}
 
 	s.logger.Info().Str("key", key).Msg("Receipt deleted successfully from S3")
@@ -254,26 +209,33 @@ func (s *S3Service) IsValidImageType(contentType string) bool {
 
 // ExtractKeyFromURL extracts the S3 key from a relative path or S3 URL
 func (s *S3Service) ExtractKeyFromURL(fileURL string) (string, error) {
-	// Handle simplified relative path format: /api/v1/debts/receipts/uuid.jpg
-	if strings.HasPrefix(fileURL, "/api/v1/debts/receipts/") {
-		// Remove the /api/v1/debts/receipts/ prefix to get the filename
-		filename := strings.TrimPrefix(fileURL, "/api/v1/debts/receipts/")
-		if filename == "" {
-			return "", fmt.Errorf("invalid relative path format: %s", fileURL)
+	// Handle API path format: /api/v1/debts/{debt-id}/receipts/{timestamp}-{uuid}.{ext}
+	if strings.HasPrefix(fileURL, "/api/v1/debts/") && strings.Contains(fileURL, "/receipts/") {
+		// Extract debt ID and filename from the path
+		// Format: /api/v1/debts/{debt-id}/receipts/{timestamp}-{uuid}.{ext}
+		parts := strings.Split(fileURL, "/")
+		
+		// This is the new format: /api/v1/debts/{debt-id}/receipts/{timestamp}-{uuid}.{ext}
+		if len(parts) < 7 {
+			return "", fmt.Errorf("invalid API path format: %s", fileURL)
 		}
 		
-		// Extract UUID and extension from filename
-		ext := filepath.Ext(filename)
-		uuidStr := strings.TrimSuffix(filename, ext)
-		
-		// Validate UUID format
-		if _, err := uuid.Parse(uuidStr); err != nil {
-			return "", fmt.Errorf("invalid UUID in filename: %s", filename)
+		// Check if filename is empty (path ends with /receipts/)
+		if parts[6] == "" {
+			return "", fmt.Errorf("invalid API path format: %s", fileURL)
 		}
 		
-		// Use the flat structure for API access
-		flatKey := fmt.Sprintf("receipts-flat/%s", filename)
-		return flatKey, nil
+		debtID := parts[4] // /api/v1/debts/{debt-id}/receipts/
+		filename := parts[6] // {timestamp}-{uuid}.{ext}
+		
+		// Validate debt ID format
+		if _, err := uuid.Parse(debtID); err != nil {
+			return "", fmt.Errorf("invalid debt ID in path: %s", debtID)
+		}
+		
+		// Construct S3 key
+		s3Key := fmt.Sprintf("%s/receipts/%s", debtID, filename)
+		return s3Key, nil
 	}
 	
 	// Handle S3 URL format: s3://bucket-name/key

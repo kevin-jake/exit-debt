@@ -23,8 +23,33 @@
 	// Receipt photo viewer state
 	let showReceiptViewer = false;
 	let selectedReceiptPhoto = '';
+	
+	// Authenticated image URLs cache
+	let authenticatedImageUrls = new Map<string, string>();
+	let imageCacheVersion = 0; // Used to trigger reactivity when cache updates
 
 	console.log(debt);
+
+	// Reactive statement to trigger UI updates when image cache changes
+	$: imageCacheVersion; // This will trigger reactivity when the cache is updated
+
+	// Function to load authenticated URLs for all payments
+	async function loadAuthenticatedImages() {
+		if (payments.length === 0) return;
+		
+		for (const payment of payments) {
+			if (payment.receipt_photo_url && !authenticatedImageUrls.has(payment.receipt_photo_url)) {
+				try {
+					const authenticatedUrl = await getAuthenticatedImageUrl(payment.receipt_photo_url);
+					authenticatedImageUrls.set(payment.receipt_photo_url, authenticatedUrl);
+					// Increment cache version to trigger reactivity
+					imageCacheVersion++;
+				} catch (error) {
+					console.error('Failed to authenticate image for payment:', payment.id, error);
+				}
+			}
+		}
+	}
 
 	onMount(() => {
 		loadPayments();
@@ -79,6 +104,8 @@
 			payments = [];
 		} finally {
 			isLoading = false;
+			// Load authenticated images after payments are loaded
+			loadAuthenticatedImages();
 		}
 	}
 
@@ -163,6 +190,26 @@
 		showReceiptViewer = true;
 	}
 
+	// Function to get authenticated image URL
+	async function getAuthenticatedImageUrl(originalUrl: string): Promise<string> {
+		// Check if we already have this URL cached
+		if (authenticatedImageUrls.has(originalUrl)) {
+			return authenticatedImageUrls.get(originalUrl)!;
+		}
+
+		try {
+			// Fetch the image with auth headers
+			const authenticatedUrl = await apiClient.fetchImageWithAuth(originalUrl);
+			// Cache the authenticated URL
+			authenticatedImageUrls.set(originalUrl, authenticatedUrl);
+			return authenticatedUrl;
+		} catch (error) {
+			console.error('Failed to fetch authenticated image:', error);
+			// Fallback to original URL if auth fetch fails
+			return originalUrl;
+		}
+	}
+
 	function getInstallmentText(plan: string): string {
 		const plans = {
 			'one_time': 'One-time',
@@ -186,10 +233,14 @@
 		console.log('Creating payment:', newPayment);
 		if (parseFloat(newPayment.amount) > 0 && newPayment.payment_date) {
 			try {
+				// Convert date to proper datetime format for backend
+				const paymentDate = new Date(newPayment.payment_date);
+				const formattedPaymentDate = paymentDate.toISOString();
+				
 				// Create the payment via API
 				const payment = await apiClient.createPayment(debt.id, {
-					amount: newPayment.amount,
-					payment_date: newPayment.payment_date,
+					amount: String(newPayment.amount),
+					payment_date: formattedPaymentDate,
 					payment_method: newPayment.payment_method,
 					description: newPayment.description
 				});
@@ -552,12 +603,12 @@
 												<td class="px-4 py-3">
 													{#if payment.receipt_photo_url}
 														<button 
-															on:click={() => viewReceiptPhoto(payment.receipt_photo_url!)}
+															on:click={() => viewReceiptPhoto(authenticatedImageUrls.get(payment.receipt_photo_url!) || payment.receipt_photo_url!)}
 															class="w-16 h-16 rounded-lg overflow-hidden border border-border hover:border-primary/50 transition-colors"
 															title="View receipt"
 														>
 															<img 
-																src={payment.receipt_photo_url} 
+																src={authenticatedImageUrls.get(payment.receipt_photo_url!) || payment.receipt_photo_url!} 
 																alt="Receipt" 
 																class="w-full h-full object-cover"
 															/>

@@ -3,12 +3,14 @@ package interfaces
 import (
 	"context"
 	"io"
+
+	"github.com/google/uuid"
 )
 
 // FileStorageService defines the interface for file storage operations
 type FileStorageService interface {
 	// UploadReceipt uploads a receipt photo and returns the relative path
-	UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string) (string, error)
+	UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string, debtID uuid.UUID) (string, error)
 	
 	// DeleteReceipt deletes a receipt photo from storage
 	DeleteReceipt(ctx context.Context, fileURL string) error

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { apiClient } from '../api';
 
 	export let photoUrl: string;
 	export let isOpen: boolean = false;
@@ -8,6 +9,7 @@
 
 	let isLoading = true;
 	let hasError = false;
+	let authenticatedPhotoUrl = '';
 
 	onMount(() => {
 		// Prevent body scroll when modal is open
@@ -19,9 +21,18 @@
 		};
 	});
 
-	// Alternative approach: use a more reliable image loading method
-	function loadImage() {
+	// Alternative approach: use a more reliable image loading method with auth
+	async function loadImage() {
 		if (!photoUrl) return;
+		
+		try {
+			// Try to get authenticated URL first
+			authenticatedPhotoUrl = await apiClient.fetchImageWithAuth(photoUrl);
+		} catch (error) {
+			console.error('Failed to fetch authenticated image, falling back to original URL:', error);
+			// Fallback to original URL if auth fails
+			authenticatedPhotoUrl = photoUrl;
+		}
 		
 		const img = new Image();
 		img.onload = () => {
@@ -32,7 +43,7 @@
 			isLoading = false;
 			hasError = true;
 		};
-		img.src = photoUrl;
+		img.src = authenticatedPhotoUrl;
 	}
 
 	function handleImageLoad() {
@@ -68,17 +79,26 @@
 		isLoading = true;
 		hasError = false;
 		// Use the new image loading method
-		loadImage();
+		loadImage().catch(error => {
+			console.error('Error loading image:', error);
+			isLoading = false;
+			hasError = true;
+		});
 	} else {
 		document.body.style.overflow = 'auto';
 		// Reset state when modal closes
 		isLoading = false;
 		hasError = false;
+		authenticatedPhotoUrl = '';
 	}
 
 	// Watch for photoUrl changes to reload image
 	$: if (photoUrl && isOpen) {
-		loadImage();
+		loadImage().catch(error => {
+			console.error('Error loading image:', error);
+			isLoading = false;
+			hasError = true;
+		});
 	}
 </script>
 
@@ -139,11 +159,11 @@
 			{/if}
 
 			<!-- Image Display -->
-			{#if !isLoading && !hasError}
+			{#if !isLoading && !hasError && authenticatedPhotoUrl}
 				<img
-					src={photoUrl}
+					src={authenticatedPhotoUrl}
 					alt="Receipt photo"
-					class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+					class="max-w-full max-h-screen object-contain rounded-lg shadow-2xl"
 					on:load={handleImageLoad}
 					on:error={handleImageError}
 				/>

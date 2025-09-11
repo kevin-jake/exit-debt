@@ -675,7 +675,7 @@ class ApiClient {
       payment_method: payment.PaymentMethod,
       description: payment.Description,
       status: payment.Status,
-      receipt_photo_url: payment.ReceiptPhotoURL,
+      receipt_photo_url: `${this.baseUrl.replace("/api/v1", "")}${payment.ReceiptPhotoURL}`,
       verified_by: payment.VerifiedBy,
       verified_at: payment.VerifiedAt,
       verification_notes: payment.VerificationNotes,
@@ -904,6 +904,33 @@ class ApiClient {
       created_at: payment.CreatedAt,
       updated_at: payment.UpdatedAt,
     }));
+  }
+
+  // Method to fetch images with authorization headers
+  async fetchImageWithAuth(imageUrl: string): Promise<string> {
+    const token = localStorage.getItem("token");
+
+    const headers: HeadersInit = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    try {
+      const response = await fetch(imageUrl, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error("Error fetching image:", error);
+      throw error;
+    }
   }
 }
 

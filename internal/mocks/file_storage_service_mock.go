@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -12,8 +13,8 @@ type MockFileStorageService struct {
 	mock.Mock
 }
 
-func (m *MockFileStorageService) UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string) (string, error) {
-	args := m.Called(ctx, file, filename, contentType)
+func (m *MockFileStorageService) UploadReceipt(ctx context.Context, file io.Reader, filename string, contentType string, debtID uuid.UUID) (string, error) {
+	args := m.Called(ctx, file, filename, contentType, debtID)
 	return args.String(0), args.Error(1)
 }
 
