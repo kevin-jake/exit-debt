@@ -22,17 +22,22 @@ services:
     environment:
       - SERVICES=s3
       - DEBUG=1
+      - DATA_DIR=/var/lib/localstack/data
+      - PERSISTENCE=1
       - DOCKER_HOST=unix:///var/run/docker.sock
       - AWS_DEFAULT_REGION=us-east-1
     ports:
       - "4566:4566"
     volumes:
+      - localstack_data:/var/lib/localstack/data
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - debt-tracker-network
 
 volumes:
   postgres_data:
+    driver: local
+  localstack_data:
     driver: local
 
 networks:
