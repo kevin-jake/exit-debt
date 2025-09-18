@@ -17,6 +17,8 @@
 		dueDate: '',
 		installmentPlan: 'monthly',
 		numberOfPayments: 1,
+		installmentCalculationMethod: 'number_of_payments' as 'number_of_payments' | 'due_date',
+		finalDueDate: '',
 		notes: ''
 	};
 
@@ -56,24 +58,25 @@
 			errors.totalAmount = 'Please enter a valid amount greater than 0';
 		}
 
-		// Due date validation
-		if (!formData.dueDate) {
-			errors.dueDate = 'Please select a due date';
-		} else {
-			const selectedDate = new Date(formData.dueDate);
-			const today = new Date();
-			today.setHours(0, 0, 0, 0);
-			
-			if (selectedDate <= today) {
-				errors.dueDate = 'Due date must be in the future';
+		// Due date validation - only required for one-time payments or due_date method
+		if (formData.paymentType === 'onetime' || formData.installmentCalculationMethod === 'due_date') {
+			if (!formData.dueDate) {
+				errors.dueDate = 'Please select a due date';
+			} else {
+				const selectedDate = new Date(formData.dueDate);
+				const today = new Date();
+				today.setHours(0, 0, 0, 0);
+				
+				if (selectedDate <= today) {
+					errors.dueDate = 'Due date must be in the future';
+				}
 			}
 		}
 
 		// Installment validation
 		if (formData.paymentType === 'installment') {
-			if (!formData.numberOfPayments || formData.numberOfPayments < 1) {
-				errors.numberOfPayments = 'Number of payments must be at least 1';
-			}
+			// Note: Validation for numberOfPayments is now handled in PaymentScheduleSection
+			// The component will ensure either numberOfPayments or dueDate is provided based on user selection
 		}
 
 		// Character limits
@@ -136,11 +139,13 @@
 	}
 
 	function handlePaymentScheduleChange(event: CustomEvent) {
-		const { paymentType, dueDate, installmentPlan, numberOfPayments } = event.detail;
+		const { paymentType, dueDate, installmentPlan, numberOfPayments, installmentCalculationMethod, finalDueDate } = event.detail;
 		formData.paymentType = paymentType;
 		formData.dueDate = dueDate;
 		formData.installmentPlan = installmentPlan;
 		formData.numberOfPayments = numberOfPayments;
+		formData.installmentCalculationMethod = installmentCalculationMethod || 'number_of_payments';
+		formData.finalDueDate = finalDueDate || '';
 		
 		// Clear related errors
 		if (errors.dueDate) delete errors.dueDate;
@@ -188,7 +193,7 @@
 			<div class="space-y-6">
 				<!-- Debt Type -->
 				<div>
-					<label class="label">Debt Type *</label>
+					<label for="debt-type" class="label">Debt Type *</label>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<label class="relative cursor-pointer">
 							<input
@@ -301,6 +306,8 @@
 				bind:dueDate={formData.dueDate}
 				bind:installmentPlan={formData.installmentPlan}
 				bind:numberOfPayments={formData.numberOfPayments}
+				bind:installmentCalculationMethod={formData.installmentCalculationMethod}
+				bind:finalDueDate={formData.finalDueDate}
 				totalAmount={parseFloat(formData.totalAmount) || 0}
 				on:change={handlePaymentScheduleChange}
 			/>
