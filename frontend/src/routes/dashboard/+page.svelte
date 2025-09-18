@@ -1,36 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { themeStore } from '$lib/stores/theme.svelte.js';
+	import { debtsStore } from '$lib/stores/debts';
+	import { contactsStore } from '$lib/stores/contacts';
+	import { notificationsStore } from '$lib/stores/notifications';
 	import CreateContactModal from '$lib/components/CreateContactModal.svelte';
 	import DebtDetailsModal from '$lib/components/DebtDetailsModal.svelte';
 	import EditDebtListModal from '$lib/components/EditDebtListModal.svelte';
-
-	// Type definitions
-	interface Contact {
-		name: string;
-		avatar: string | null;
-	}
-
-	interface Payment {
-		amount: number;
-		date: string;
-	}
-
-	interface DebtList {
-		id: number;
-		title: string;
-		description: string;
-		total_amount: number;
-		is_owed_by_me: boolean;
-		contact: Contact;
-		created_at: string;
-		updated_at: string;
-		due_date: string;
-		last_payment: Payment | null;
-	}
+	import type { Debt } from '$lib/stores/debts';
 
 	// State management
-	let debtLists = $state<DebtList[]>([]);
+	let debtLists = $state<Debt[]>([]);
 	let searchQuery = $state('');
 	let sortBy = $state('updated_at');
 	let sortOrder = $state('desc');
@@ -38,19 +18,20 @@
 	let showCreateContactModal = $state(false);
 	let showDebtDetailsModal = $state(false);
 	let showEditDebtModal = $state(false);
-	let selectedDebt = $state<DebtList | null>(null);
+	let selectedDebt = $state<Debt | null>(null);
+	let error = $state<string | null>(null);
 
 	// Quick overview calculations
 	let totalIOwe = $derived(
 		debtLists
-			.filter((debt) => debt.total_amount > 0 && debt.is_owed_by_me)
-			.reduce((sum, debt) => sum + debt.total_amount, 0)
+			.filter((debt) => parseFloat(debt.total_amount) > 0 && debt.debt_type === 'i_owe')
+			.reduce((sum, debt) => sum + parseFloat(debt.total_amount), 0)
 	);
 
 	let totalOwedToMe = $derived(
 		debtLists
-			.filter((debt) => debt.total_amount > 0 && !debt.is_owed_by_me)
-			.reduce((sum, debt) => sum + debt.total_amount, 0)
+			.filter((debt) => parseFloat(debt.total_amount) > 0 && debt.debt_type === 'owed_to_me')
+			.reduce((sum, debt) => sum + parseFloat(debt.total_amount), 0)
 	);
 
 	// Filtered and sorted debt lists
@@ -60,8 +41,7 @@
 				if (!searchQuery) return true;
 				const query = searchQuery.toLowerCase();
 				return (
-					debt.contact?.name?.toLowerCase().includes(query) ||
-					debt.title?.toLowerCase().includes(query) ||
+					debt.contactName?.toLowerCase().includes(query) ||
 					debt.description?.toLowerCase().includes(query) ||
 					debt.total_amount.toString().includes(query)
 				);
@@ -71,16 +51,16 @@
 
 				switch (sortBy) {
 					case 'amount':
-						aValue = a.total_amount;
-						bValue = b.total_amount;
+						aValue = parseFloat(a.total_amount);
+						bValue = parseFloat(b.total_amount);
 						break;
 					case 'created_at':
 						aValue = new Date(a.created_at);
 						bValue = new Date(b.created_at);
 						break;
 					case 'contact_name':
-						aValue = a.contact?.name || '';
-						bValue = b.contact?.name || '';
+						aValue = a.contactName || '';
+						bValue = b.contactName || '';
 						break;
 					default: // updated_at
 						aValue = new Date(a.updated_at);
@@ -99,13 +79,13 @@
 	let upcomingDueDates = $derived(
 		debtLists
 			.filter((debt) => {
-				if (!debt.due_date) return false;
-				const dueDate = new Date(debt.due_date);
+				if (!debt.dueDate) return false;
+				const dueDate = new Date(debt.dueDate);
 				const thirtyDaysFromNow = new Date();
 				thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 				return dueDate <= thirtyDaysFromNow;
 			})
-			.sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+			.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
 	);
 
 	// Methods
@@ -154,139 +134,95 @@
 	}
 
 	function handleContactCreated(event: CustomEvent) {
-		// In a real app, this would refresh the dashboard data
+		// Refresh contacts and debts data
+		loadDebts();
 		showCreateContactModal = false;
-		console.log('Contact created:', event.detail);
+		notificationsStore.success(
+			'Contact Created',
+			`Successfully created contact "${event.detail.name}"`
+		);
 	}
 
-	function handleDebtDetails(debt: DebtList) {
-		console.log(debt);
+	function handleDebtDetails(debt: Debt) {
 		selectedDebt = debt;
 		showDebtDetailsModal = true;
 	}
 
-	function handleEditDebt(debt: DebtList) {
+	function handleEditDebt(debt: Debt) {
 		selectedDebt = debt;
 		showEditDebtModal = true;
 	}
 
 	function handleDebtUpdated(event: CustomEvent) {
-		// In a real app, this would refresh the dashboard data
+		// Refresh debts data
+		loadDebts();
 		showEditDebtModal = false;
 		selectedDebt = null;
-		console.log('Debt updated:', event.detail);
+		notificationsStore.success(
+			'Debt Updated',
+			'Successfully updated debt information'
+		);
 	}
 
 	function handleDebtDeleted(event: CustomEvent) {
-		// In a real app, this would refresh the dashboard data
+		// Refresh debts data
+		loadDebts();
 		showDebtDetailsModal = false;
 		selectedDebt = null;
-		console.log('Debt deleted:', event.detail);
+		notificationsStore.success(
+			'Debt Deleted',
+			'Successfully deleted debt'
+		);
 	}
 
-	function mapDebtListToDebtModal(debtList: DebtList) {
+	function mapDebtToDebtModal(debt: Debt) {
 		return {
-			id: debtList.id,
-			type: debtList.is_owed_by_me ? 'i_owe' : 'owed_to_me',
-			contactName: debtList.contact?.name || 'Unknown Contact',
-			totalAmount: debtList.total_amount,
-			remainingBalance: debtList.total_amount, // Assuming no payments made yet
-			status: 'active' as const, // Default status
-			dueDate: debtList.due_date,
-			installmentPlan: 'onetime' as const, // Default to one-time
-			nextPayment: debtList.due_date,
-			currency: 'USD', // Default currency
-			description: debtList.description,
-			createdAt: debtList.created_at,
-			// Additional properties that might be needed
-			notes: debtList.description || '',
-			numberOfPayments: 1,
-			updatedAt: debtList.updated_at
+			id: debt.id,
+			type: debt.debt_type,
+			contactName: debt.contactName,
+			totalAmount: debt.total_amount,
+			remainingBalance: debt.remainingBalance,
+			status: debt.status,
+			dueDate: debt.dueDate,
+			installmentPlan: debt.installment_plan,
+			nextPayment: debt.nextPayment,
+			currency: debt.currency,
+			description: debt.description,
+			createdAt: debt.created_at,
+			notes: debt.notes || '',
+			numberOfPayments: debt.number_of_payments || 1,
+			updatedAt: debt.updated_at
 		};
 	}
 
-	onMount(async () => {
+	async function loadDebts() {
 		try {
-			// Mock data for demonstration
-			debtLists = [
-				{
-					id: 1,
-					title: 'Car Loan',
-					description: 'Monthly car payment',
-					total_amount: 15000,
-					is_owed_by_me: true,
-					contact: { name: 'Bank of America', avatar: null },
-					created_at: '2024-01-15T10:00:00Z',
-					updated_at: '2024-03-20T14:30:00Z',
-					due_date: '2024-04-01T00:00:00Z',
-					last_payment: { amount: 500, date: '2024-03-15T10:00:00Z' }
-				},
-				{
-					id: 2,
-					title: 'Personal Loan',
-					description: 'Loan from friend',
-					total_amount: 2500,
-					is_owed_by_me: false,
-					contact: { name: 'Alice Johnson', avatar: null },
-					created_at: '2024-02-10T09:00:00Z',
-					updated_at: '2024-03-18T16:45:00Z',
-					due_date: '2024-03-25T00:00:00Z',
-					last_payment: { amount: 200, date: '2024-03-10T10:00:00Z' }
-				},
-				{
-					id: 3,
-					title: 'Credit Card',
-					description: 'Monthly credit card payment',
-					total_amount: 3200,
-					is_owed_by_me: true,
-					contact: { name: 'Chase Bank', avatar: null },
-					created_at: '2024-01-20T11:30:00Z',
-					updated_at: '2024-03-19T12:15:00Z',
-					due_date: '2024-03-28T00:00:00Z',
-					last_payment: { amount: 300, date: '2024-03-05T14:20:00Z' }
-				},
-				{
-					id: 4,
-					title: 'Business Investment',
-					description: 'Investment in startup',
-					total_amount: 8000,
-					is_owed_by_me: false,
-					contact: { name: 'Bob Smith', avatar: null },
-					created_at: '2024-02-05T08:15:00Z',
-					updated_at: '2024-03-15T13:30:00Z',
-					due_date: '2024-04-15T00:00:00Z',
-					last_payment: { amount: 1000, date: '2024-03-01T09:45:00Z' }
-				},
-				{
-					id: 5,
-					title: 'Student Loan',
-					description: 'Federal student loan',
-					total_amount: 25000,
-					is_owed_by_me: true,
-					contact: { name: 'Department of Education', avatar: null },
-					created_at: '2024-01-01T00:00:00Z',
-					updated_at: '2024-03-10T10:00:00Z',
-					due_date: '2024-04-05T00:00:00Z',
-					last_payment: { amount: 400, date: '2024-03-01T11:00:00Z' }
-				},
-				{
-					id: 6,
-					title: 'Rent Money',
-					description: 'Rent payment from roommate',
-					total_amount: 1200,
-					is_owed_by_me: false,
-					contact: { name: 'Carol Davis', avatar: null },
-					created_at: '2024-03-01T07:00:00Z',
-					updated_at: '2024-03-20T15:20:00Z',
-					due_date: '2024-03-30T00:00:00Z',
-					last_payment: null
-				}
-			];
-		} catch (error) {
-			console.error('Failed to load dashboard data:', error);
+			isLoading = true;
+			error = null;
+			
+			// Load debts using the store
+			await debtsStore.loadDebts();
+			
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to load debts';
+			notificationsStore.error(
+				'Failed to Load Debts',
+				error
+			);
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	// Subscribe to store changes
+	let unsubscribe = debtsStore.subscribe((state) => {
+		debtLists = state.debts;
+		isLoading = state.isLoading;
+		error = state.error;
+	});
+
+	onMount(() => {
+		loadDebts();
 	});
 </script>
 
@@ -429,34 +365,24 @@
 						<div class="flex items-start justify-between mb-3">
 							<div class="flex items-center space-x-3">
 								<div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-									{#if debt.contact?.avatar}
-										<img src={debt.contact.avatar} alt={debt.contact.name} class="w-10 h-10 rounded-full" />
-									{:else}
 										<span class="text-primary font-medium">
-											{debt.contact?.name?.charAt(0) || '?'}
+										{debt.contactName?.charAt(0) || '?'}
 										</span>
-									{/if}
 								</div>
 								<div>
-									<h3 class="font-medium text-foreground">{debt.contact?.name || 'Unknown Contact'}</h3>
-									<p class="text-sm text-muted-foreground">{debt.title}</p>
+									<h3 class="font-medium text-foreground">{debt.contactName || 'Unknown Contact'}</h3>
+									<p class="text-sm text-muted-foreground">{debt.description || 'No description'}</p>
 								</div>
 							</div>
 							<div class="text-right">
-								<p class="font-semibold {debt.is_owed_by_me ? 'text-destructive' : 'text-green-600'}">
-									{formatCurrency(debt.total_amount)}
+								<p class="font-semibold {debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-green-600'}">
+									{formatCurrency(parseFloat(debt.total_amount))}
 								</p>
 								<p class="text-xs text-muted-foreground">
-									{debt.is_owed_by_me ? 'You owe' : 'Owed to you'}
+									{debt.debt_type === 'i_owe' ? 'You owe' : 'Owed to you'}
 								</p>
 							</div>
 						</div>
-
-						{#if debt.last_payment}
-							<div class="text-sm text-muted-foreground mb-3">
-								Last payment: {formatCurrency(debt.last_payment.amount)} on {formatDate(debt.last_payment.date)}
-							</div>
-						{/if}
 
 						<div class="flex items-center justify-between text-xs text-muted-foreground">
 							<span>Updated {formatDate(debt.updated_at)}</span>
@@ -482,25 +408,25 @@
 		{:else}
 			<div class="space-y-3">
 				{#each upcomingDueDates as debt}
-					{@const daysUntilDue = getDaysUntilDue(debt.due_date)}
+					{@const daysUntilDue = getDaysUntilDue(debt.dueDate)}
 					{@const dueDateColor = getDueDateColor(daysUntilDue)}
 
 					<div class="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer" on:click={() => handleDebtDetails(debt)}>
 						<div class="flex items-center space-x-3">
 							<div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
 								<span class="text-primary text-sm font-medium">
-									{debt.contact?.name?.charAt(0) || '?'}
+									{debt.contactName?.charAt(0) || '?'}
 								</span>
 							</div>
 							<div>
-								<h4 class="font-medium text-foreground">{debt.contact?.name || 'Unknown Contact'}</h4>
-								<p class="text-sm text-muted-foreground">{debt.title}</p>
+								<h4 class="font-medium text-foreground">{debt.contactName || 'Unknown Contact'}</h4>
+								<p class="text-sm text-muted-foreground">{debt.description || 'No description'}</p>
 							</div>
 						</div>
 
 						<div class="text-right">
-							<p class="font-semibold {debt.is_owed_by_me ? 'text-destructive' : 'text-green-600'}">
-								{formatCurrency(debt.total_amount)}
+							<p class="font-semibold {debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-green-600'}">
+								{formatCurrency(parseFloat(debt.total_amount))}
 							</p>
 							<p class="text-sm {dueDateColor}">
 								{#if daysUntilDue < 0}
@@ -530,7 +456,7 @@
 <!-- Debt Details Modal -->
 {#if showDebtDetailsModal && selectedDebt}
 	<DebtDetailsModal
-		debt={mapDebtListToDebtModal(selectedDebt)}
+		debt={selectedDebt}
 		on:close={() => { showDebtDetailsModal = false; selectedDebt = null; }}
 		on:edit={() => selectedDebt && handleEditDebt(selectedDebt)}
 		on:delete={handleDebtDeleted}
@@ -540,7 +466,7 @@
 <!-- Edit Debt Modal -->
 {#if showEditDebtModal && selectedDebt}
 	<EditDebtListModal
-		debt={mapDebtListToDebtModal(selectedDebt)}
+		debt={mapDebtToDebtModal(selectedDebt)}
 		on:close={() => { showEditDebtModal = false; selectedDebt = null; }}
 		on:debt-updated={handleDebtUpdated}
 	/>

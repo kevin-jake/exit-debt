@@ -1,13 +1,16 @@
+<!-- TODO: fix save changes button -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { debtsStore } from '$lib/stores/debts';
+	import { notificationsStore } from '$lib/stores/notifications';
 	import DatePicker from './DatePicker.svelte';
 
 	export let debt: any;
 
 	const dispatch = createEventDispatcher();
 
-	// Form data with current debt values
-	let formData = {
+	// Form data with current debt values - reactive to debt prop changes
+	$: formData = {
 		totalAmount: debt.total_amount?.toString() || debt.totalAmount?.toString() || '',
 		currency: debt.currency || '',
 		description: debt.description || '',
@@ -46,6 +49,7 @@
 	});
 
 	function checkForChanges() {
+		// Deep comparison of form data with original data
 		hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 	}
 
@@ -104,28 +108,34 @@
 		isLoading = true;
 
 		try {
-			// TODO: Replace with actual API call
-			await new Promise(resolve => setTimeout(resolve, 1500));
-
-			// Mock successful debt update
-			const updatedDebt = {
-				...debt,
+			// Prepare update data
+			const updateData = {
 				total_amount: formData.totalAmount,
 				currency: formData.currency,
-				description: formData.description,
-				due_date: formData.dueDate ? new Date(formData.dueDate + 'T00:00:00').toISOString() : debt.due_date,
+				description: formData.description || undefined,
+				notes: formData.notes || undefined,
+				due_date: formData.dueDate ? new Date(formData.dueDate + 'T00:00:00').toISOString() : undefined,
 				installment_plan: formData.installmentPlan,
-				number_of_payments: isInstallmentPlan ? formData.numberOfPayments : 1,
-				notes: formData.notes,
-				total_remaining_debt: calculateRemainingBalance().toString(),
-				updated_at: new Date().toISOString()
+				number_of_payments: isInstallmentPlan ? formData.numberOfPayments : undefined,
 			};
+
+			// Update debt using the store
+			const updatedDebt = await debtsStore.updateDebt(debt.id, updateData);
+
+			notificationsStore.success(
+				'Debt Updated',
+				'Successfully updated debt information'
+			);
 
 			dispatch('debt-updated', updatedDebt);
 			
 		} catch (error) {
 			console.error('Error updating debt:', error);
-			errors.general = 'Failed to update debt. Please try again.';
+			errors.general = error instanceof Error ? error.message : 'Failed to update debt. Please try again.';
+			notificationsStore.error(
+				'Update Failed',
+				errors.general
+			);
 		} finally {
 			isLoading = false;
 		}
@@ -205,6 +215,19 @@
 
 	// Watch for changes
 	$: checkForChanges();
+
+	// Update original data when debt prop changes
+	$: if (debt) {
+		originalData = {
+			totalAmount: debt.total_amount?.toString() || debt.totalAmount?.toString() || '',
+			currency: debt.currency || '',
+			description: debt.description || '',
+			dueDate: debt.due_date || debt.dueDate || '',
+			installmentPlan: debt.installment_plan || debt.installmentPlan || 'onetime',
+			numberOfPayments: debt.number_of_payments || debt.numberOfPayments || 1,
+			notes: debt.notes || ''
+		};
+	}
 
 	// Recalculate installment amount when relevant fields change
 	$: if (formData.totalAmount && formData.numberOfPayments) {

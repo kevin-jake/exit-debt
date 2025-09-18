@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { apiClient, type Payment } from '../api';
+	import { debtsStore } from '$lib/stores/debts';
+	import { notificationsStore } from '$lib/stores/notifications';
 	import ReceiptPhotoViewer from './ReceiptPhotoViewer.svelte';
 	import DatePicker from './DatePicker.svelte';
 
@@ -36,12 +38,12 @@
 	// Reactive financial calculations based on payments
 	$: totalPaidAmount = payments
 		.filter(payment => payment.status === 'verified' || payment.status === 'completed')
-		.reduce((sum, payment) => sum + parseFloat(payment.amount), 0);
+		.reduce((sum, payment) => sum + parseFloat(payment.amount || '0'), 0);
 
-	$: remainingBalance = parseFloat(debt.total_amount) - totalPaidAmount;
+	$: remainingBalance = parseFloat(debt.total_amount || '0') - totalPaidAmount;
 
-	$: paymentProgress = parseFloat(debt.total_amount) > 0 
-		? Math.round((totalPaidAmount / parseFloat(debt.total_amount)) * 100)
+	$: paymentProgress = parseFloat(debt.total_amount || '0') > 0 
+		? Math.round((totalPaidAmount / parseFloat(debt.total_amount || '0')) * 100)
 		: 100;
 
 	// Function to load authenticated URLs for all payments
@@ -238,8 +240,10 @@
 		console.log('Creating payment:', newPayment);
 		if (parseFloat(newPayment.amount) > 0 && newPayment.payment_date) {
 			try {
+				isLoading = true;
+				error = null;
+
 				// Convert date to proper datetime format for backend
-				// The backend expects format: 2006-01-02T15:04:05Z07:00
 				const paymentDate = new Date(newPayment.payment_date + 'T00:00:00');
 				const formattedPaymentDate = paymentDate.toISOString();
 				
@@ -271,12 +275,27 @@
 					receiptPhoto: undefined
 				};
 				showPaymentForm = false;
+
+				notificationsStore.success(
+					'Payment Added',
+					'Successfully recorded payment'
+				);
 			} catch (err) {
 				error = err instanceof Error ? err.message : 'Failed to add payment';
 				console.error('Error adding payment:', err);
+				notificationsStore.error(
+					'Payment Failed',
+					error
+				);
+			} finally {
+				isLoading = false;
 			}
 		} else {
 			error = 'Please provide both amount and payment date';
+			notificationsStore.error(
+				'Validation Error',
+				error
+			);
 		}
 	}
 
@@ -285,11 +304,21 @@
 			console.log('Verifying payment:', paymentId);
 			await apiClient.verifyPayment(paymentId);
 			console.log('Payment verified successfully');
+			
 			// Reload payments to get updated data
 			await loadPayments();
+
+			notificationsStore.success(
+				'Payment Verified',
+				'Payment has been successfully verified'
+			);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to verify payment';
 			console.error('Error verifying payment:', err);
+			notificationsStore.error(
+				'Verification Failed',
+				error
+			);
 		}
 	}
 
@@ -298,11 +327,21 @@
 			console.log('Rejecting payment:', paymentId);
 			await apiClient.rejectPayment(paymentId);
 			console.log('Payment rejected successfully');
+			
 			// Reload payments to get updated data
 			await loadPayments();
+
+			notificationsStore.success(
+				'Payment Rejected',
+				'Payment has been rejected'
+			);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to reject payment';
 			console.error('Error rejecting payment:', err);
+			notificationsStore.error(
+				'Rejection Failed',
+				error
+			);
 		}
 	}
 
@@ -314,9 +353,33 @@
 		dispatch('edit');
 	}
 
-	function deleteDebt() {
-		dispatch('delete');
-		closeModal();
+	async function deleteDebt() {
+		if (!debt?.id) {
+			notificationsStore.error('Error', 'No debt ID provided');
+			return;
+		}
+
+		const confirmed = confirm(
+			`Are you sure you want to delete this debt? This action cannot be undone and will also delete all associated payment records.`
+		);
+		
+		if (!confirmed) return;
+
+		try {
+			await debtsStore.deleteDebt(debt.id);
+			notificationsStore.success(
+				'Debt Deleted',
+				'Successfully deleted debt and all associated payments'
+			);
+			dispatch('delete', { id: debt.id });
+			closeModal();
+		} catch (error) {
+			console.error('Error deleting debt:', error);
+			notificationsStore.error(
+				'Delete Failed',
+				error instanceof Error ? error.message : 'Failed to delete debt'
+			);
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -339,8 +402,8 @@
 		<div class="px-6 py-4 border-b border-border flex items-center justify-between">
 			<div class="flex items-center space-x-4">
 				<h2 class="text-xl font-semibold text-foreground">Debt Details</h2>
-				<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {getStatusBadgeClass(debt.status)}">
-					{debt.status.charAt(0).toUpperCase() + debt.status.slice(1)}
+				<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {getStatusBadgeClass(debt.status || 'active')}">
+					{(debt.status || 'active').charAt(0).toUpperCase() + (debt.status || 'active').slice(1)}
 				</span>
 			</div>
 			<button on:click={closeModal} class="text-muted-foreground hover:text-foreground">
@@ -363,13 +426,13 @@
 								<div class="flex items-center space-x-4">
 									<div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
 										<span class="text-primary-foreground font-medium">
-											{debt.contactName.split(' ').map((n: string) => n[0]).join('')}
+											{(debt.contactName || debt.contact?.name || 'Unknown').split(' ').map((n: string) => n[0]).join('')}
 										</span>
 									</div>
 									<div>
-										<div class="font-medium text-foreground">{debt.contactName}</div>
+										<div class="font-medium text-foreground">{debt.contactName || debt.contact?.name || 'Unknown Contact'}</div>
 										<div class="text-sm text-muted-foreground">
-											{debt.debt_type === 'owed_to_me' ? 'Owes you money' : 'You owe money to'}
+											{(debt.debt_type || 'i_owe') === 'owed_to_me' ? 'Owes you money' : 'You owe money to'}
 										</div>
 									</div>
 								</div>
@@ -377,13 +440,13 @@
 								<div class="grid grid-cols-2 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Debt Type</label>
-										<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {debt.debt_type === 'owed_to_me' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
-											{debt.debt_type === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
+										<span class="inline-flex px-3 py-1 text-sm font-medium rounded-full {(debt.debt_type || 'i_owe') === 'owed_to_me' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}">
+											{(debt.debt_type || 'i_owe') === 'owed_to_me' ? 'Owed to Me' : 'I Owe'}
 										</span>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Currency</label>
-										<div class="text-sm text-foreground">{debt.currency}</div>
+										<div class="text-sm text-foreground">{debt.currency || 'USD'}</div>
 									</div>
 								</div>
 
@@ -396,7 +459,7 @@
 
 								<div>
 									<label class="block text-sm font-medium text-muted-foreground mb-1">Created</label>
-									<div class="text-sm text-foreground">{formatDate(debt.created_at)}</div>
+									<div class="text-sm text-foreground">{formatDate(debt.created_at || new Date().toISOString())}</div>
 								</div>
 							</div>
 						</div>
@@ -410,16 +473,16 @@
 								<div class="grid grid-cols-3 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Total Amount</label>
-										<div class="text-lg font-semibold text-foreground">{formatCurrency(debt.total_amount, debt.currency)}</div>
+										<div class="text-lg font-semibold text-foreground">{formatCurrency(parseFloat(debt.total_amount || '0'), debt.currency || 'USD')}</div>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Total Paid</label>
-										<div class="text-lg font-semibold text-success">{formatCurrency(totalPaidAmount, debt.currency)}</div>
+										<div class="text-lg font-semibold text-success">{formatCurrency(totalPaidAmount, debt.currency || 'USD')}</div>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Remaining Balance</label>
 										<div class="text-lg font-semibold {remainingBalance > 0 ? 'text-warning' : 'text-success'}">
-											{formatCurrency(remainingBalance, debt.currency)}
+											{formatCurrency(remainingBalance, debt.currency || 'USD')}
 										</div>
 									</div>
 								</div>
@@ -438,18 +501,18 @@
 								<div class="grid grid-cols-2 gap-4">
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Due Date</label>
-										<div class="text-sm text-foreground">{formatDate(debt.dueDate)}</div>
+										<div class="text-sm text-foreground">{formatDate(debt.dueDate || debt.due_date || debt.created_at)}</div>
 									</div>
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Installment Plan</label>
-										<div class="text-sm text-foreground">{getInstallmentText(debt.installment_plan)}</div>
+										<div class="text-sm text-foreground">{getInstallmentText(debt.installment_plan || 'onetime')}</div>
 									</div>
 								</div>
 
-								{#if debt.nextPayment}
+								{#if debt.nextPayment || debt.next_payment_date}
 									<div>
 										<label class="block text-sm font-medium text-muted-foreground mb-1">Next Payment</label>
-										<div class="text-sm text-foreground">{formatDate(debt.nextPayment)}</div>
+										<div class="text-sm text-foreground">{formatDate(debt.nextPayment || debt.next_payment_date || debt.created_at)}</div>
 									</div>
 								{/if}
 							</div>
@@ -617,10 +680,10 @@
 										{#each payments as payment, index (payment.id || `payment-${index}`)}
 											<tr>
 												<td class="px-4 py-3 text-sm text-foreground">{formatDate(payment.payment_date)}</td>
-												<td class="px-4 py-3 text-sm font-medium text-foreground">{formatCurrency(payment.amount, payment.currency || debt.currency)}</td>
+												<td class="px-4 py-3 text-sm font-medium text-foreground">{formatCurrency(parseFloat(payment.amount || '0'), payment.currency || debt.currency || 'USD')}</td>
 												<td class="px-4 py-3">
-													<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getPaymentStatusClass(payment.status)}">
-														{payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+													<span class="inline-flex px-2 py-1 text-xs font-medium rounded-full {getPaymentStatusClass(payment.status || 'pending')}">
+														{(payment.status || 'pending').charAt(0).toUpperCase() + (payment.status || 'pending').slice(1)}
 													</span>
 												</td>
 												<td class="px-4 py-3">
@@ -644,21 +707,21 @@
 														</div>
 													{/if}
 												</td>
-												{#if debt.debt_type === 'owed_to_me'}
+												{#if (debt.debt_type || 'i_owe') === 'owed_to_me'}
 													<td class="px-4 py-3">
-														{#if payment.status !== 'verified' && payment.status !== 'completed'}
+														{#if (payment.status || 'pending') !== 'verified' && (payment.status || 'pending') !== 'completed'}
 															<div class="flex items-center space-x-2">
 																<button 
 																	on:click={() => verifyPayment(payment.id)}
 																	class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-																	title={payment.status === 'rejected' ? 'Reverify payment' : 'Verify payment'}
+																	title={(payment.status || 'pending') === 'rejected' ? 'Reverify payment' : 'Verify payment'}
 																>
 																	<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 																	</svg>
-																	{payment.status === 'rejected' ? 'Reverify' : 'Verify'}
+																	{(payment.status || 'pending') === 'rejected' ? 'Reverify' : 'Verify'}
 																</button>
-																{#if payment.status !== 'rejected'}
+																{#if (payment.status || 'pending') !== 'rejected'}
 																	<button 
 																		on:click={() => rejectPayment(payment.id)}
 																		class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
