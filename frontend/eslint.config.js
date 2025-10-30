@@ -1,42 +1,46 @@
-import prettier from 'eslint-config-prettier';
-import { includeIgnoreFile } from '@eslint/compat';
-import js from '@eslint/js';
-import svelte from 'eslint-plugin-svelte';
-import globals from 'globals';
-import { fileURLToPath } from 'node:url';
-import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
+import js from '@eslint/js'
+import globals from 'globals'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooksPlugin from 'eslint-plugin-react-hooks'
+import reactRefreshPlugin from 'eslint-plugin-react-refresh'
 
-const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
-
-export default ts.config(
-	includeIgnoreFile(gitignorePath),
-	js.configs.recommended,
-	...ts.configs.recommended,
-	...svelte.configs.recommended,
-	prettier,
-	...svelte.configs.prettier,
-	{
-		languageOptions: {
-			globals: { ...globals.browser, ...globals.node }
-		},
-		rules: { // typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
-		// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-		"no-undef": 'off' }
-	},
-	{
-		files: [
-			'**/*.svelte',
-			'**/*.svelte.ts',
-			'**/*.svelte.js'
-		],
-		languageOptions: {
-			parserOptions: {
-				projectService: true,
-				extraFileExtensions: ['.svelte'],
-				parser: ts.parser,
-				svelteConfig
-			}
-		}
-	}
-);
+export default [
+  {
+    ignores: ['dist', 'node_modules', '*.config.js']
+  },
+  js.configs.recommended,
+  {
+    files: ['**/*.{js,jsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.browser,
+        ...globals.es2020
+      },
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module'
+      }
+    },
+    settings: {
+      react: { version: '18.2' }
+    },
+    plugins: {
+      react: reactPlugin,
+      'react-hooks': reactHooksPlugin,
+      'react-refresh': reactRefreshPlugin
+    },
+    rules: {
+      ...reactPlugin.configs.recommended.rules,
+      ...reactPlugin.configs['jsx-runtime'].rules,
+      ...reactHooksPlugin.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true }
+      ],
+      'react/prop-types': 'off',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+    }
+  }
+]
