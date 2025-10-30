@@ -5,7 +5,14 @@ import { useContactsStore } from '@stores/contactsStore'
 import { LoadingSpinner } from '@components/common/LoadingSpinner'
 import { StatCard } from '@components/common/StatCard'
 import { EmptyState } from '@components/common/EmptyState'
-import { formatCurrency, formatRelativeTime, getDaysUntilDue, getDueDateColor, getInitials } from '@utils/formatters'
+import { CreateDebtModal } from '@components/debts/CreateDebtModal'
+import {
+  formatCurrency,
+  formatRelativeTime,
+  getDaysUntilDue,
+  getDueDateColor,
+  getInitials,
+} from '@utils/formatters'
 import { ROUTES } from '@/routes/routes'
 
 export const DashboardPage = () => {
@@ -13,6 +20,7 @@ export const DashboardPage = () => {
   const { debts, isLoading: debtsLoading, fetchDebts } = useDebtsStore()
   const { contacts, isLoading: contactsLoading, fetchContacts } = useContactsStore()
   const [isLoading, setIsLoading] = useState(true)
+  const [showCreateDebtModal, setShowCreateDebtModal] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -27,6 +35,11 @@ export const DashboardPage = () => {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDebtCreated = async () => {
+    setShowCreateDebtModal(false)
+    await fetchDebts()
   }
 
   // Calculate totals
@@ -146,12 +159,22 @@ export const DashboardPage = () => {
         <h2 className="mb-4 text-xl font-semibold text-foreground">Quick Actions</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <button
-            onClick={() => navigate(ROUTES.DEBTS_NEW)}
+            onClick={() => setShowCreateDebtModal(true)}
             className="flex items-center space-x-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <svg className="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              <svg
+                className="h-5 w-5 text-primary"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
             </div>
             <div>
@@ -165,7 +188,12 @@ export const DashboardPage = () => {
             className="flex items-center space-x-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
-              <svg className="h-5 w-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5 text-success"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -185,7 +213,12 @@ export const DashboardPage = () => {
             className="flex items-center space-x-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10">
-              <svg className="h-5 w-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-5 w-5 text-warning"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -219,7 +252,7 @@ export const DashboardPage = () => {
             icon="debts"
             title="No debts yet"
             description="Get started by adding your first debt entry."
-            action={() => navigate(ROUTES.DEBTS_NEW)}
+            action={() => setShowCreateDebtModal(true)}
             actionLabel="Add Debt"
           />
         ) : (
@@ -310,7 +343,14 @@ export const DashboardPage = () => {
           </div>
         </div>
       )}
+
+      {/* Create Debt Modal */}
+      {showCreateDebtModal && (
+        <CreateDebtModal
+          onDebtCreated={handleDebtCreated}
+          onClose={() => setShowCreateDebtModal(false)}
+        />
+      )}
     </div>
   )
 }
-
