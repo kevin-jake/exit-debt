@@ -280,28 +280,12 @@ class ApiClient {
       }),
     })
 
-    return {
-      id: response.ID,
-      debt_list_id: response.DebtListID,
-      amount: response.Amount,
-      currency: response.Currency,
-      payment_date: response.PaymentDate,
-      payment_method: response.PaymentMethod,
-      description: response.Description,
-      status: response.Status,
-      receipt_photo_url: response.ReceiptPhotoURL,
-      verified_by: response.VerifiedBy,
-      verified_at: response.VerifiedAt,
-      verification_notes: response.VerificationNotes,
-      created_at: response.CreatedAt,
-      updated_at: response.UpdatedAt,
-    }
+    return this._mapPayment(response)
   }
 
-  async getPayments(debtId) {
-    const response = await this.request(`/debts/${debtId}/payments`)
-
-    return response.map((payment) => ({
+  // Helper method to map payment response
+  _mapPayment(payment) {
+    return {
       id: payment.ID,
       debt_list_id: payment.DebtListID,
       amount: payment.Amount,
@@ -316,7 +300,12 @@ class ApiClient {
       verification_notes: payment.VerificationNotes,
       created_at: payment.CreatedAt,
       updated_at: payment.UpdatedAt,
-    }))
+    }
+  }
+
+  async getPayments(debtId) {
+    const response = await this.request(`/debts/${debtId}/payments`)
+    return response.map((payment) => this._mapPayment(payment))
   }
 
   async updatePayment(paymentId, paymentData) {
@@ -325,22 +314,7 @@ class ApiClient {
       body: JSON.stringify(paymentData),
     })
 
-    return {
-      id: response.ID,
-      debt_list_id: response.DebtListID,
-      amount: response.Amount,
-      currency: response.Currency,
-      payment_date: response.PaymentDate,
-      payment_method: response.PaymentMethod,
-      description: response.Description,
-      status: response.Status,
-      receipt_photo_url: response.ReceiptPhotoURL,
-      verified_by: response.VerifiedBy,
-      verified_at: response.VerifiedAt,
-      verification_notes: response.VerificationNotes,
-      created_at: response.CreatedAt,
-      updated_at: response.UpdatedAt,
-    }
+    return this._mapPayment(response)
   }
 
   async deletePayment(paymentId) {
@@ -360,10 +334,7 @@ class ApiClient {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }
 
-    const response = await fetch(
-      `${this.baseUrl}/debts/payments/${paymentId}/receipt`,
-      config
-    )
+    const response = await fetch(`${this.baseUrl}/debts/payments/${paymentId}/receipt`, config)
 
     if (!response.ok) {
       const errorData = await response.json()
@@ -376,43 +347,9 @@ class ApiClient {
     }
   }
 
-  async getAllPayments() {
-    const response = await this.request('/debts/payments')
-
-    return response.map((payment) => ({
-      id: payment.ID,
-      debt_list_id: payment.DebtListID,
-      amount: payment.Amount,
-      currency: payment.Currency,
-      payment_date: payment.PaymentDate,
-      payment_method: payment.PaymentMethod,
-      description: payment.Description,
-      status: payment.Status,
-      receipt_photo_url: payment.ReceiptPhotoURL,
-      verified_by: payment.VerifiedBy,
-      verified_at: payment.VerifiedAt,
-      verification_notes: payment.VerificationNotes,
-      created_at: payment.CreatedAt,
-      updated_at: payment.UpdatedAt,
-    }))
-  }
-
   async getUpcomingPayments() {
     const response = await this.request('/debts/payments/upcoming')
-
-    return response.map((payment) => ({
-      id: payment.ID,
-      debt_list_id: payment.DebtListID,
-      amount: payment.Amount,
-      currency: payment.Currency,
-      payment_date: payment.PaymentDate,
-      payment_method: payment.PaymentMethod,
-      description: payment.Description,
-      status: payment.Status,
-      receipt_photo_url: payment.ReceiptPhotoURL,
-      created_at: payment.CreatedAt,
-      updated_at: payment.UpdatedAt,
-    }))
+    return response.map((payment) => this._mapPayment(payment))
   }
 
   // Method to fetch images with authorization headers
@@ -463,4 +400,3 @@ export const tokenManager = {
     return !!this.getToken()
   },
 }
-

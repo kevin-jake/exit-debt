@@ -39,11 +39,11 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-xl bg-card shadow-medium"
+        className="my-8 w-full max-w-md overflow-hidden rounded-xl bg-card shadow-medium"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
@@ -77,9 +77,7 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
                 />
               </svg>
             </div>
-            <h3 className="mb-2 text-center text-lg font-medium text-foreground">
-              Are you sure?
-            </h3>
+            <h3 className="mb-2 text-center text-lg font-medium text-foreground">Are you sure?</h3>
             <p className="text-center text-sm text-muted-foreground">
               This will permanently delete <span className="font-medium">"{contact.name}"</span> and
               all associated data. This action cannot be undone.
@@ -103,4 +101,3 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
     </div>
   )
 }
-

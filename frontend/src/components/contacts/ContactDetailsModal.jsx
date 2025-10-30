@@ -36,11 +36,11 @@ export const ContactDetailsModal = ({ contact, onClose, onEdit, onDelete }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-xl bg-card shadow-medium"
+        className="my-8 w-full max-w-lg rounded-xl bg-card shadow-medium"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
@@ -198,4 +198,3 @@ export const ContactDetailsModal = ({ contact, onClose, onEdit, onDelete }) => {
     </div>
   )
 }
-

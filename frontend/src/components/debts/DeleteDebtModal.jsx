@@ -29,10 +29,10 @@ export const DeleteDebtModal = ({ debt, onConfirm, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
       onClick={handleOverlayClick}
     >
-      <div className="card w-full max-w-md overflow-hidden">
+      <div className="card my-8 w-full max-w-md overflow-hidden">
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Delete Debt</h2>
@@ -111,11 +111,7 @@ export const DeleteDebtModal = ({ debt, onConfirm, onClose }) => {
             >
               Cancel
             </button>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="btn-destructive flex-1"
-            >
+            <button onClick={handleDelete} disabled={isDeleting} className="btn-destructive flex-1">
               {isDeleting ? (
                 <span className="flex items-center justify-center">
                   <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -146,4 +142,3 @@ export const DeleteDebtModal = ({ debt, onConfirm, onClose }) => {
     </div>
   )
 }
-

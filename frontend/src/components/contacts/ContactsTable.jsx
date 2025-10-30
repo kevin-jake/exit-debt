@@ -104,7 +104,7 @@ export const ContactsTable = () => {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
-    
+
     return date.toLocaleDateString()
   }
 
@@ -201,7 +201,7 @@ export const ContactsTable = () => {
       </div>
 
       {/* Desktop Table - continuing in next message due to length */}
-      
+
       {filteredAndSortedContacts.length === 0 ? (
         <div className="py-12 text-center">
           <svg
@@ -270,7 +270,9 @@ export const ContactsTable = () => {
                             </span>
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-foreground">{contact.name}</div>
+                            <div className="text-sm font-medium text-foreground">
+                              {contact.name}
+                            </div>
                             {contact.notes && (
                               <div className="max-w-48 truncate text-sm text-muted-foreground">
                                 {contact.notes}
@@ -437,7 +439,12 @@ export const ContactsTable = () => {
                 <div className="mb-3 space-y-2 text-sm">
                   {contact.email && (
                     <div className="flex items-center space-x-2 text-muted-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -450,7 +457,12 @@ export const ContactsTable = () => {
                   )}
                   {contact.phone && (
                     <div className="flex items-center space-x-2 text-muted-foreground">
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -463,10 +475,7 @@ export const ContactsTable = () => {
                   )}
                 </div>
 
-                <div
-                  className="flex justify-end space-x-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <div className="flex justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => viewContact(contact)}
                     className="btn-secondary px-3 py-1 text-xs"
@@ -559,4 +568,3 @@ export const ContactsTable = () => {
     </div>
   )
 }
-

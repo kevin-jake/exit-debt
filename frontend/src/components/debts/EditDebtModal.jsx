@@ -32,10 +32,20 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
   const onSubmit = async (data) => {
     setIsSubmitting(true)
     try {
-      await updateDebt(debt.id, {
+      // Convert due_date to ISO 8601 datetime format if provided
+      const debtData = {
         ...data,
         total_amount: parseFloat(data.total_amount),
-      })
+      }
+      
+      if (debtData.due_date && debtData.due_date.trim() !== '') {
+        debtData.due_date = new Date(debtData.due_date + 'T12:00:00Z').toISOString()
+      } else {
+        // Remove empty due_date field
+        delete debtData.due_date
+      }
+      
+      await updateDebt(debt.id, debtData)
       success('Debt updated successfully')
       onDebtUpdated()
     } catch (err) {
@@ -53,10 +63,10 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
       onClick={handleOverlayClick}
     >
-      <div className="card w-full max-w-lg overflow-hidden">
+      <div className="card my-8 w-full max-w-lg overflow-hidden">
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Edit Debt</h2>
@@ -100,7 +110,10 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
 
             {/* Contact */}
             <div>
-              <label htmlFor="contact_id" className="mb-2 block text-sm font-medium text-foreground">
+              <label
+                htmlFor="contact_id"
+                className="mb-2 block text-sm font-medium text-foreground"
+              >
                 Contact <span className="text-destructive">*</span>
               </label>
               <select
@@ -149,7 +162,10 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
 
             {/* Description */}
             <div>
-              <label htmlFor="description" className="mb-2 block text-sm font-medium text-foreground">
+              <label
+                htmlFor="description"
+                className="mb-2 block text-sm font-medium text-foreground"
+              >
                 Description <span className="text-destructive">*</span>
               </label>
               <input
@@ -157,7 +173,10 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
                 type="text"
                 {...register('description', {
                   required: 'Description is required',
-                  maxLength: { value: 255, message: 'Description must be less than 255 characters' },
+                  maxLength: {
+                    value: 255,
+                    message: 'Description must be less than 255 characters',
+                  },
                 })}
                 className="input"
                 disabled={isSubmitting}
@@ -198,7 +217,9 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
                 disabled={isSubmitting}
                 placeholder="Additional notes or details"
               />
-              {errors.notes && <p className="mt-1 text-sm text-destructive">{errors.notes.message}</p>}
+              {errors.notes && (
+                <p className="mt-1 text-sm text-destructive">{errors.notes.message}</p>
+              )}
             </div>
           </div>
 
@@ -242,4 +263,3 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
     </div>
   )
 }
-

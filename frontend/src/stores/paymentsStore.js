@@ -9,19 +9,6 @@ export const usePaymentsStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
-  // Fetch all payments
-  fetchAllPayments: async () => {
-    try {
-      set({ isLoading: true, error: null })
-      const payments = await apiClient.getAllPayments()
-      set({ payments, isLoading: false })
-      return payments
-    } catch (error) {
-      set({ error: error.message, isLoading: false })
-      throw error
-    }
-  },
-
   // Fetch payments for a specific debt
   fetchPayments: async (debtId) => {
     try {
@@ -103,8 +90,6 @@ export const usePaymentsStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null })
       const result = await apiClient.uploadReceiptPhoto(paymentId, file)
-      // Refresh the payment to get the updated receipt URL
-      await get().fetchAllPayments()
       set({ isLoading: false })
       return result
     } catch (error) {
@@ -123,4 +108,3 @@ export const usePaymentsStore = create((set, get) => ({
     set({ error: null })
   },
 }))
-
