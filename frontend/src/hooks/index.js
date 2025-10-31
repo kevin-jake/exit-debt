@@ -9,6 +9,4 @@ export {
   useIsDesktop,
   useIsDarkMode,
 } from './useMediaQuery'
-export { useClickOutside } from './useClickOutside'
 export { useKeyPress, useKeyboardShortcut, useEscapeKey } from './useKeyPress'
-

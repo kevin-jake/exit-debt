@@ -15,13 +15,15 @@ export const useAuthStore = create((set, get) => ({
         // Validate token by making a request to the protected health endpoint
         await apiClient.healthCheck()
 
-        // If we get here, the token is valid
+        // If we get here, the token is valid - retrieve user data
+        const user = tokenManager.getUserData()
         set({
           isAuthenticated: true,
           isLoading: false,
+          user,
         })
       } catch (error) {
-        // Token is invalid, remove it
+        // Token is invalid, remove it and user data
         console.log('Invalid token, removing from storage')
         tokenManager.removeToken()
         set({
@@ -43,8 +45,9 @@ export const useAuthStore = create((set, get) => ({
       set({ isLoading: true })
       const response = await apiClient.login(credentials)
 
-      // Store token
+      // Store token and user data
       tokenManager.setToken(response.token)
+      tokenManager.setUserData(response.user)
 
       // Update state
       set({
@@ -76,6 +79,7 @@ export const useAuthStore = create((set, get) => ({
 
   // Set user data after successful login
   setUser: (user) => {
+    tokenManager.setUserData(user)
     set({
       user,
       isAuthenticated: true,
@@ -98,4 +102,3 @@ export const useAuthStore = create((set, get) => ({
     set({ isLoading })
   },
 }))
-

@@ -382,7 +382,7 @@ class ApiClient {
 // Create and export the API client instance
 export const apiClient = new ApiClient(API_BASE_URL)
 
-// Utility functions for token management
+// Utility functions for token and user data management
 export const tokenManager = {
   getToken() {
     return localStorage.getItem('token')
@@ -394,9 +394,33 @@ export const tokenManager = {
 
   removeToken() {
     localStorage.removeItem('token')
+    this.removeUserData() // Also remove user data when removing token
   },
 
   hasToken() {
     return !!this.getToken()
+  },
+
+  getUserData() {
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      try {
+        return JSON.parse(userData)
+      } catch (error) {
+        console.error('Failed to parse user data from localStorage:', error)
+        return null
+      }
+    }
+    return null
+  },
+
+  setUserData(user) {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    }
+  },
+
+  removeUserData() {
+    localStorage.removeItem('user')
   },
 }
