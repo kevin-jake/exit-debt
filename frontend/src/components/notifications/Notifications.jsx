@@ -10,7 +10,12 @@ const NotificationIcon = ({ type }) => {
     ),
     error: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
       </svg>
     ),
     warning: (
@@ -40,10 +45,11 @@ const NotificationIcon = ({ type }) => {
 
 const getTypeClasses = (type) => {
   const classes = {
-    success: 'bg-success/10 border-success text-success-foreground dark:bg-success/20',
-    error: 'bg-destructive/10 border-destructive text-destructive-foreground dark:bg-destructive/20',
-    warning: 'bg-warning/10 border-warning text-warning-foreground dark:bg-warning/20',
-    info: 'bg-primary/10 border-primary text-primary-foreground dark:bg-primary/20',
+    success: 'bg-success border-success dark:bg-success dark:text-success-foreground text-white',
+    error:
+      'bg-destructive border-destructive dark:bg-destructive dark:text-destructive-foreground text-white',
+    warning: 'bg-warning border-warning dark:bg-warning dark:text-warning-foreground text-white',
+    info: 'bg-primary border-primary dark:bg-primary dark:text-primary-foreground text-white',
   }
 
   return classes[type] || 'bg-muted border-border text-foreground'
@@ -56,11 +62,7 @@ export const Notifications = () => {
   return (
     <div className="fixed right-4 top-4 z-50 max-w-sm space-y-2">
       {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className="animate-slide-up"
-          role="alert"
-        >
+        <div key={notification.id} className="animate-slide-up" role="alert">
           <div
             className={cn(
               'flex items-start rounded-lg border p-4 shadow-lg',
@@ -95,4 +97,3 @@ export const Notifications = () => {
     </div>
   )
 }
-

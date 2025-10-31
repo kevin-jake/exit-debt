@@ -7,7 +7,6 @@ import { Layout } from '@components/layout/Layout'
 
 function App() {
   const initAuth = useAuthStore((state) => state.init)
-
   useEffect(() => {
     // Initialize theme from localStorage
     initializeTheme()
