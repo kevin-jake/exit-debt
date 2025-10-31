@@ -39,10 +39,9 @@ export const useDebtsStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null })
       const debt = await apiClient.createDebtList(debtData)
-      set((state) => ({
-        debts: [...state.debts, debt],
-        isLoading: false,
-      }))
+      // Don't add to state immediately - let the caller refresh the list
+      // This ensures the full debt data with contact information is loaded
+      set({ isLoading: false })
       return debt
     } catch (error) {
       set({ error: error.message, isLoading: false })
@@ -55,11 +54,18 @@ export const useDebtsStore = create((set, get) => ({
     try {
       set({ isLoading: true, error: null })
       const updatedDebt = await apiClient.updateDebtList(id, debtData)
-      set((state) => ({
-        debts: state.debts.map((d) => (d.id === id ? updatedDebt : d)),
-        selectedDebt: state.selectedDebt?.id === id ? updatedDebt : state.selectedDebt,
-        isLoading: false,
-      }))
+      // Preserve the contact information from the existing debt
+      set((state) => {
+        const existingDebt = state.debts.find((d) => d.id === id)
+        const debtWithContact = existingDebt?.contact
+          ? { ...updatedDebt, contact: existingDebt.contact }
+          : updatedDebt
+        return {
+          debts: state.debts.map((d) => (d.id === id ? debtWithContact : d)),
+          selectedDebt: state.selectedDebt?.id === id ? debtWithContact : state.selectedDebt,
+          isLoading: false,
+        }
+      })
       return updatedDebt
     } catch (error) {
       set({ error: error.message, isLoading: false })

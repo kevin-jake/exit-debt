@@ -1,12 +1,15 @@
 import { useState } from 'react'
 import { DebtsTable } from '@components/debts/DebtsTable'
 import { CreateDebtModal } from '@components/debts/CreateDebtModal'
+import { useDebtsStore } from '@stores/debtsStore'
 
 export const DebtsPage = () => {
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const fetchDebts = useDebtsStore((state) => state.fetchDebts)
 
-  const handleDebtCreated = () => {
+  const handleDebtCreated = async () => {
     setShowCreateModal(false)
+    await fetchDebts()
   }
 
   return (

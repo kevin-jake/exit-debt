@@ -35,16 +35,16 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
       // Convert due_date to ISO 8601 datetime format if provided
       const debtData = {
         ...data,
-        total_amount: parseFloat(data.total_amount),
+        total_amount: String(data.total_amount),
       }
-      
+
       if (debtData.due_date && debtData.due_date.trim() !== '') {
         debtData.due_date = new Date(debtData.due_date + 'T12:00:00Z').toISOString()
       } else {
         // Remove empty due_date field
         delete debtData.due_date
       }
-      
+
       await updateDebt(debt.id, debtData)
       success('Debt updated successfully')
       onDebtUpdated()

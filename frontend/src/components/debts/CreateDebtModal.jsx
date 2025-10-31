@@ -36,7 +36,7 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
       // Convert due_date to ISO 8601 datetime format if provided
       const debtData = {
         ...data,
-        total_amount: parseFloat(data.total_amount),
+        total_amount: String(data.total_amount),
       }
 
       if (debtData.due_date && debtData.due_date.trim() !== '') {
