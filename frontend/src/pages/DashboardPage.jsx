@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@components/common/LoadingSpinner'
 import { StatCard } from '@components/common/StatCard'
 import { EmptyState } from '@components/common/EmptyState'
 import { CreateDebtModal } from '@components/debts/CreateDebtModal'
+import { CreateContactModal } from '@components/contacts/CreateContactModal'
 import {
   formatCurrency,
   formatRelativeTime,
@@ -21,6 +22,7 @@ export const DashboardPage = () => {
   const { contacts, isLoading: contactsLoading, fetchContacts } = useContactsStore()
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDebtModal, setShowCreateDebtModal] = useState(false)
+  const [showCreateContactModal, setShowCreateContactModal] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -40,6 +42,11 @@ export const DashboardPage = () => {
   const handleDebtCreated = async () => {
     setShowCreateDebtModal(false)
     await fetchDebts()
+  }
+
+  const handleContactCreated = async () => {
+    setShowCreateContactModal(false)
+    await fetchContacts()
   }
 
   // Calculate totals
@@ -184,7 +191,7 @@ export const DashboardPage = () => {
           </button>
 
           <button
-            onClick={() => navigate(ROUTES.CONTACTS_NEW)}
+            onClick={() => setShowCreateContactModal(true)}
             className="flex items-center space-x-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
@@ -349,6 +356,14 @@ export const DashboardPage = () => {
         <CreateDebtModal
           onDebtCreated={handleDebtCreated}
           onClose={() => setShowCreateDebtModal(false)}
+        />
+      )}
+
+      {/* Create Contact Modal */}
+      {showCreateContactModal && (
+        <CreateContactModal
+          onContactCreated={handleContactCreated}
+          onClose={() => setShowCreateContactModal(false)}
         />
       )}
     </div>
