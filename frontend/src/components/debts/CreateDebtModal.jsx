@@ -4,6 +4,7 @@ import { useDebtsStore } from '@stores/debtsStore'
 import { useContactsStore } from '@stores/contactsStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
 import { PaymentFields } from './PaymentFields'
+import { CreateContactModal } from '../contacts/CreateContactModal'
 
 export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
   const createDebt = useDebtsStore((state) => state.createDebt)
@@ -11,6 +12,7 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
   const { success, error } = useNotificationsStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
+  const [showCreateContactModal, setShowCreateContactModal] = useState(false)
 
   const {
     register,
@@ -99,6 +101,15 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
     setMouseDownOnOverlay(false)
   }
 
+  const handleContactCreated = async () => {
+    // Close the create contact modal
+    setShowCreateContactModal(false)
+    // Fetch updated contacts list
+    await fetchContacts()
+    // The newly created contact will be available in the contacts list
+    // and will be automatically selected if it's the only contact
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
@@ -155,19 +166,37 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
               >
                 Contact <span className="text-destructive">*</span>
               </label>
-              <select
-                id="contact_id"
-                {...register('contact_id', { required: 'Contact is required' })}
-                className="input"
-                disabled={isSubmitting}
-              >
-                <option value="">Select a contact</option>
-                {contacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.name}
-                  </option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <select
+                  id="contact_id"
+                  {...register('contact_id', { required: 'Contact is required' })}
+                  className="input"
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select a contact</option>
+                  {contacts.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateContactModal(true)}
+                  disabled={isSubmitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  Add New Contact
+                </button>
+              </div>
               {errors.contact_id && (
                 <p className="mt-1 text-sm text-destructive">{errors.contact_id.message}</p>
               )}
@@ -291,6 +320,14 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
           </div>
         </form>
       </div>
+
+      {/* Create Contact Modal */}
+      {showCreateContactModal && (
+        <CreateContactModal
+          onContactCreated={handleContactCreated}
+          onClose={() => setShowCreateContactModal(false)}
+        />
+      )}
     </div>
   )
 }
