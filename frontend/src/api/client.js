@@ -347,9 +347,14 @@ class ApiClient {
     }
   }
 
-  async getUpcomingPayments() {
-    const response = await this.request('/debts/payments/upcoming')
-    return response.map((payment) => this._mapPayment(payment))
+  async getUpcomingPayments(days = 30) {
+    const response = await this.request(`/upcoming-payments?days=${days}`)
+    return response
+  }
+
+  async getPaymentSchedule(debtId) {
+    const response = await this.request(`/debts/${debtId}/schedule`)
+    return response
   }
 
   // Method to fetch images with authorization headers

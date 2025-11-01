@@ -243,13 +243,12 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
                 htmlFor="description"
                 className="mb-2 block text-sm font-medium text-foreground"
               >
-                Description <span className="text-destructive">*</span>
+                Description
               </label>
               <input
                 id="description"
                 type="text"
                 {...register('description', {
-                  required: 'Description is required',
                   maxLength: {
                     value: 255,
                     message: 'Description must be less than 255 characters',

@@ -262,15 +262,16 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
           {calculationMethod === 'by_date' && numberOfInstallments && (
             <div className="rounded-md bg-muted/50 p-3">
               <p className="text-sm text-muted-foreground">
-                <strong>Calculated Number of Installments:</strong> {numberOfInstallments}
+                Calculated Number of Installments: {numberOfInstallments}
               </p>
             </div>
           )}
+          {/* Installment Amount (Calculated) */}
 
           {calculationMethod === 'by_count' && dueDate && (
             <div className="rounded-md bg-muted/50 p-3">
               <p className="text-sm text-muted-foreground">
-                <strong>Calculated Final Due Date:</strong>{' '}
+                Calculated Final Due Date:{' '}
                 {new Date(dueDate).toLocaleDateString('en-US', {
                   year: 'numeric',
                   month: 'long',
@@ -279,25 +280,10 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
               </p>
             </div>
           )}
-
-          {/* Installment Amount (Calculated) */}
           {totalAmount && numberOfInstallments > 0 && (
-            <div>
-              <label
-                htmlFor="installment_amount"
-                className="mb-2 block text-sm font-medium text-foreground"
-              >
-                Installment Amount
-              </label>
-              <div
-                id="installment_amount"
-                className="input bg-muted-lighter flex items-center"
-                style={{ minHeight: '2.5rem', padding: '0.5rem 0.75rem' }}
-              >
-                {formatCurrency(parseFloat(totalAmount) / parseInt(numberOfInstallments))}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Calculated:{' '}
+            <div className="rounded-md bg-muted/50 p-3">
+              <p className="text-sm text-muted-foreground">
+                Calculated Installment Amount:{' '}
                 {formatCurrency(parseFloat(totalAmount) / parseInt(numberOfInstallments))} per
                 installment
               </p>

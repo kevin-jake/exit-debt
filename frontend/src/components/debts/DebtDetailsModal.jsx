@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { usePaymentsStore } from '@stores/paymentsStore'
+import { useDebtsStore } from '@stores/debtsStore'
 import { ImageViewerModal } from '@components/common/ImageViewerModal'
 import { PaymentHistory } from './PaymentHistory'
+import { InstallmentScheduleModal } from './InstallmentScheduleModal'
 import {
   formatCurrency,
   formatDate,
@@ -17,6 +19,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
     uploadReceipt,
     isLoading: paymentsLoading,
   } = usePaymentsStore()
+  const fetchPaymentSchedule = useDebtsStore((state) => state.fetchPaymentSchedule)
   const [debtPayments, setDebtPayments] = useState([])
   const [showAddPayment, setShowAddPayment] = useState(false)
   const [newPayment, setNewPayment] = useState({
@@ -27,9 +30,13 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
   const [receiptFile, setReceiptFile] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [viewingReceipt, setViewingReceipt] = useState(null)
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [nextPaymentInfo, setNextPaymentInfo] = useState(null)
+  const [loadingSchedule, setLoadingSchedule] = useState(false)
 
   useEffect(() => {
     loadPayments(debt.id)
+    loadNextPaymentInfo(debt.id)
   }, [debt.id])
 
   const loadPayments = async (debtId) => {
@@ -40,6 +47,41 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
     } catch (error) {
       console.error('Failed to load payments:', error)
       setDebtPayments([])
+    }
+  }
+
+  const loadNextPaymentInfo = async (debtId) => {
+    // Only load if it's an installment debt
+    if (!debt.installment_plan || debt.installment_plan === 'onetime') {
+      return
+    }
+
+    try {
+      setLoadingSchedule(true)
+      const schedule = await fetchPaymentSchedule(debtId)
+
+      // Find the next payment that is not paid
+      const nextPayment = schedule.find((item) => item.status !== 'paid')
+
+      if (nextPayment) {
+        // Check if the payment is overdue based on due date
+        const dueDate = new Date(nextPayment.due_date)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        dueDate.setHours(0, 0, 0, 0)
+
+        // Update status if overdue
+        if (nextPayment.status === 'pending' && dueDate < today) {
+          nextPayment.status = 'overdue'
+        }
+      }
+
+      setNextPaymentInfo(nextPayment || null)
+    } catch (error) {
+      console.error('Failed to load next payment info:', error)
+      setNextPaymentInfo(null)
+    } finally {
+      setLoadingSchedule(false)
     }
   }
 
@@ -66,8 +108,9 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
         await uploadReceipt(payment.id, receiptFile)
       }
 
-      // Reload payments
+      // Reload payments and next payment info
       await loadPayments(payment.debt_list_id)
+      await loadNextPaymentInfo(payment.debt_list_id)
 
       // Reset form
       setNewPayment({
@@ -230,18 +273,101 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                 <div className="mb-2 text-sm font-medium text-muted-foreground">Due Date</div>
                 <div className="flex items-center justify-between">
                   <div className="text-foreground">{formatDate(debt.due_date)}</div>
-                  {daysUntilDue !== null && (
-                    <span className={`text-sm font-medium ${getDueDateColor(daysUntilDue)}`}>
-                      {daysUntilDue < 0
-                        ? `Overdue by ${Math.abs(daysUntilDue)} days`
-                        : daysUntilDue === 0
-                          ? 'Due today'
-                          : `Due in ${daysUntilDue} days`}
-                    </span>
-                  )}
                 </div>
               </div>
             )}
+
+            {/* Next Payment Date */}
+            {debt.installment_plan &&
+              debt.installment_plan !== 'onetime' &&
+              debt.number_of_payments && (
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 text-sm font-medium text-muted-foreground">Next Payment</div>
+                  {loadingSchedule ? (
+                    <div className="py-4 text-center">
+                      <div className="border-3 inline-block h-6 w-6 animate-spin rounded-full border-solid border-primary border-r-transparent"></div>
+                    </div>
+                  ) : nextPaymentInfo ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm text-muted-foreground">Due Date</div>
+                          <div className="text-foreground">
+                            {formatDate(nextPaymentInfo.due_date)}
+                          </div>
+                        </div>
+                        {getDaysUntilDue(nextPaymentInfo.due_date) !== null && (
+                          <span
+                            className={`text-sm font-medium ${getDueDateColor(getDaysUntilDue(nextPaymentInfo.due_date))}`}
+                          >
+                            {nextPaymentInfo.status === 'overdue' ||
+                            nextPaymentInfo.status === 'missed'
+                              ? `Overdue by ${Math.abs(getDaysUntilDue(nextPaymentInfo.due_date))} days`
+                              : getDaysUntilDue(nextPaymentInfo.due_date) === 0
+                                ? 'Due today'
+                                : getDaysUntilDue(nextPaymentInfo.due_date) <= 3
+                                  ? `Due in ${getDaysUntilDue(nextPaymentInfo.due_date)} day${getDaysUntilDue(nextPaymentInfo.due_date) === 1 ? '' : 's'} ⚠️`
+                                  : `Due in ${getDaysUntilDue(nextPaymentInfo.due_date)} days`}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border pt-3">
+                        <div className="text-sm text-muted-foreground">Amount Due</div>
+                        <div
+                          className={`text-xl font-bold ${
+                            debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                          }`}
+                        >
+                          {formatCurrency(parseFloat(nextPaymentInfo.amount || 0))}
+                        </div>
+                      </div>
+                      {nextPaymentInfo.payment_number && (
+                        <div className="flex items-center justify-between border-t border-border pt-3">
+                          <div className="text-sm text-muted-foreground">Payment Number</div>
+                          <div className="text-sm font-medium text-foreground">
+                            #{nextPaymentInfo.payment_number}
+                          </div>
+                        </div>
+                      )}
+                      {debt.installment_plan && (
+                        <div className="flex items-center justify-between border-t border-border pt-3">
+                          <div className="text-sm text-muted-foreground">Payment Frequency</div>
+                          <div className="text-sm font-medium capitalize text-foreground">
+                            {debt.installment_plan === 'biweekly'
+                              ? 'Bi-weekly'
+                              : debt.installment_plan}
+                          </div>
+                        </div>
+                      )}
+                      <div className="border-t border-border pt-3">
+                        <button
+                          onClick={() => setShowSchedule(true)}
+                          className="btn-secondary w-full text-sm"
+                        >
+                          <svg
+                            className="mr-2 h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          View Full Payment Schedule
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center text-sm text-muted-foreground">
+                      All payments completed or no schedule available
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* Notes */}
             {debt.notes && (
@@ -310,6 +436,19 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
 
       {/* Image Viewer Modal */}
       <ImageViewerModal payment={viewingReceipt} onClose={() => setViewingReceipt(null)} />
+
+      {/* Installment Schedule Modal */}
+      {showSchedule && (
+        <InstallmentScheduleModal
+          debt={debt}
+          payments={debtPayments}
+          onClose={() => setShowSchedule(false)}
+          onPaymentUpdate={() => {
+            loadPayments(debt.id)
+            loadNextPaymentInfo(debt.id)
+          }}
+        />
+      )}
     </div>
   )
 }

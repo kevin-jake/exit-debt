@@ -98,5 +98,15 @@ export const useDebtsStore = create((set, get) => ({
   clearError: () => {
     set({ error: null })
   },
-}))
 
+  // Fetch payment schedule
+  fetchPaymentSchedule: async (debtId) => {
+    try {
+      const schedule = await apiClient.getPaymentSchedule(debtId)
+      return schedule
+    } catch (error) {
+      console.error('Failed to fetch payment schedule:', error)
+      throw error
+    }
+  },
+}))
