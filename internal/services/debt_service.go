@@ -700,7 +700,13 @@ func (s *debtService) GetPaymentSchedule(ctx context.Context, debtListID uuid.UU
 		return nil, fmt.Errorf("failed to verify ownership: %w", err)
 	}
 	if !belongs {
-		return nil, entities.ErrDebtListNotFound
+		isContact, err := s.debtListRepo.IsContactOfDebtList(ctx, debtListID, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to verify contact association: %w", err)
+		}
+		if !isContact {
+			return nil, entities.ErrDebtListNotFound
+		}
 	}
 
 	// Get debt list

@@ -189,6 +189,17 @@ func (r *debtListRepositoryGORM) BelongsToUser(ctx context.Context, debtListID, 
 	return count > 0, nil
 }
 
+func (r *debtListRepositoryGORM) IsContactOfDebtList(ctx context.Context, debtListID, userID uuid.UUID) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&models.DebtList{}).
+		Joins("JOIN contacts ON debt_lists.contact_id = contacts.id").
+		Where("debt_lists.id = ? AND contacts.user_id_ref = ?", debtListID, userID).
+		Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check if user is contact of debt list: %w", err)
+	}
+	return count > 0, nil
+}
+
 func (r *debtListRepositoryGORM) UpdatePaymentTotals(ctx context.Context, debtListID uuid.UUID, totalPaid, remaining decimal.Decimal) error {
 	if err := r.db.WithContext(ctx).Model(&models.DebtList{}).
 		Where("id = ?", debtListID).

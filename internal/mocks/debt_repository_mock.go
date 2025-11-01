@@ -60,6 +60,11 @@ func (m *MockDebtListRepository) BelongsToUser(ctx context.Context, debtListID u
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockDebtListRepository) IsContactOfDebtList(ctx context.Context, debtListID uuid.UUID, userID uuid.UUID) (bool, error) {
+	args := m.Called(ctx, debtListID, userID)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *MockDebtListRepository) GetOverdueForUser(ctx context.Context, userID uuid.UUID) ([]entities.DebtList, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {

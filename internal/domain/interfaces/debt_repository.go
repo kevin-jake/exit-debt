@@ -22,6 +22,7 @@ type DebtListRepository interface {
 	GetOverdueForUser(ctx context.Context, userID uuid.UUID) ([]entities.DebtList, error)
 	GetDueSoonForUser(ctx context.Context, userID uuid.UUID, dueDate time.Time) ([]entities.DebtList, error)
 	BelongsToUser(ctx context.Context, debtListID, userID uuid.UUID) (bool, error)
+	IsContactOfDebtList(ctx context.Context, debtListID, userID uuid.UUID) (bool, error)
 	UpdatePaymentTotals(ctx context.Context, debtListID uuid.UUID, totalPaid, remaining decimal.Decimal) error
 	UpdateStatus(ctx context.Context, debtListID uuid.UUID, status string) error
 	UpdateNextPaymentDate(ctx context.Context, debtListID uuid.UUID, nextPaymentDate time.Time) error
