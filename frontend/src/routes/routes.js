@@ -11,10 +11,6 @@ export const ROUTES = {
   // Protected routes
   DASHBOARD: '/dashboard',
   CONTACTS: '/contacts',
-  CONTACTS_NEW: '/contacts/new',
   DEBTS: '/debts',
-  DEBTS_NEW: '/debts/new',
-  DEBTS_PAYMENT: '/debts/payment',
   SETTINGS: '/settings',
 }
-

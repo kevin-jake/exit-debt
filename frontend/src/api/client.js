@@ -357,6 +357,26 @@ class ApiClient {
     return response
   }
 
+  async verifyPayment(paymentId) {
+    const response = await this.request(`/debts/payments/${paymentId}/verify`, {
+      method: 'POST',
+      body: JSON.stringify({
+        status: 'completed',
+      }),
+    })
+    return this._mapPayment(response)
+  }
+
+  async rejectPayment(paymentId) {
+    const response = await this.request(`/debts/payments/${paymentId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({
+        status: 'rejected',
+      }),
+    })
+    return this._mapPayment(response)
+  }
+
   // Method to fetch images with authorization headers
   async fetchImageWithAuth(imageUrl) {
     const token = localStorage.getItem('token')

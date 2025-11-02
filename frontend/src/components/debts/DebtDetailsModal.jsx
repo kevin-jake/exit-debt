@@ -152,7 +152,6 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
     }
   }
 
-  const daysUntilDue = getDaysUntilDue(debt.due_date)
   // Calculate total paid and remaining balance
   const totalPaid = debtPayments.reduce((sum, payment) => sum + parseFloat(payment.amount || 0), 0)
   const remainingBalance = parseFloat(debt.total_amount || 0) - totalPaid
@@ -391,6 +390,11 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
               onAddPayment={handleAddPayment}
               onFileChange={handleFileChange}
               onViewReceipt={(payment) => setViewingReceipt(payment)}
+              debtType={debt.debt_type}
+              onPaymentStatusChange={() => {
+                loadPayments(debt.id)
+                loadNextPaymentInfo(debt.id)
+              }}
             />
 
             {/* Timestamps */}
