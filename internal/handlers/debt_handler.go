@@ -447,6 +447,59 @@ func (h *DebtHandler) GetDebtListItems(c *gin.Context) {
 	c.JSON(http.StatusOK, NewSuccessResponse("Payments retrieved successfully", debtItems, requestID))
 }
 
+// DeleteDebtItem handles debt item (payment) deletion
+func (h *DebtHandler) DeleteDebtItem(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	// Extract request ID and user ID for logging
+	requestID := getRequestID(c)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		h.logger.Error().Str("request_id", requestID).Msg("User ID not found in context")
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("Unauthorized", "", requestID))
+		return
+	}
+
+	userUUID, ok := userID.(uuid.UUID)
+	if !ok {
+		h.logger.Error().Str("request_id", requestID).Msg("Invalid user ID type in context")
+		c.JSON(http.StatusUnauthorized, NewErrorResponse("Unauthorized", "", requestID))
+		return
+	}
+
+	// Parse debt item ID from URL parameter
+	debtItemIDStr := c.Param("id")
+	debtItemID, err := uuid.Parse(debtItemIDStr)
+	if err != nil {
+		h.logger.Warn().Str("request_id", requestID).Str("debt_item_id", debtItemIDStr).Msg("Invalid debt item ID format")
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid debt item ID", "", requestID))
+		return
+	}
+
+	logger := h.logger.With().Str("request_id", requestID).Str("user_id", userUUID.String()).Str("debt_item_id", debtItemID.String()).Str("method", "DeleteDebtItem").Logger()
+
+	logger.Info().Msg("Debt item deletion attempt")
+
+	err = h.debtService.DeleteDebtItem(ctx, debtItemID, userUUID)
+	if err != nil {
+		logger.Error().Err(err).Msg("Debt item deletion failed")
+
+		// Handle specific error types
+		switch err {
+		case entities.ErrDebtItemNotFound:
+			c.JSON(http.StatusNotFound, NewErrorResponse("Debt item not found", "", requestID))
+		default:
+			c.JSON(http.StatusInternalServerError, NewErrorResponse("Internal server error", "", requestID))
+		}
+		return
+	}
+
+	logger.Info().Msg("Debt item deleted successfully")
+
+	c.JSON(http.StatusOK, NewSuccessResponse("Payment deleted successfully", nil, requestID))
+}
+
 // GetOverdueItems handles retrieving overdue debt lists
 func (h *DebtHandler) GetOverdueItems(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)

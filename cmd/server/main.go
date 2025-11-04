@@ -162,11 +162,12 @@ func main() {
 				debts.PUT("/:id", debtHandler.UpdateDebtList)
 				debts.DELETE("/:id", debtHandler.DeleteDebtList)
 
-				// Debt item (payment) operations
-				debts.POST("/payments", debtHandler.CreateDebtItem)
-				debts.GET("/:id/payments", debtHandler.GetDebtListItems)
+			// Debt item (payment) operations
+			debts.POST("/payments", debtHandler.CreateDebtItem)
+			debts.GET("/:id/payments", debtHandler.GetDebtListItems)
+			debts.DELETE("/payments/:id", debtHandler.DeleteDebtItem)
 
-				// Payment verification operations
+			// Payment verification operations
 				debts.GET("/verifications/pending", debtHandler.GetPendingVerifications)
 				debts.POST("/payments/:id/verify", debtHandler.VerifyDebtItem)
 				debts.POST("/payments/:id/reject", debtHandler.RejectDebtItem)
