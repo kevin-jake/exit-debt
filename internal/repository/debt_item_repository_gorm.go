@@ -224,6 +224,7 @@ func (r *debtItemRepositoryGORM) UpdateReceiptPhoto(ctx context.Context, debtIte
 func (r *debtItemRepositoryGORM) entityToGORM(debtItem *entities.DebtItem) *models.DebtItem {
 	return &models.DebtItem{
 		ID:                debtItem.ID,
+		UserID:            debtItem.UserID,
 		DebtListID:        debtItem.DebtListID,
 		Amount:            debtItem.Amount,
 		Currency:          debtItem.Currency,
@@ -244,6 +245,7 @@ func (r *debtItemRepositoryGORM) entityToGORM(debtItem *entities.DebtItem) *mode
 func (r *debtItemRepositoryGORM) gormToEntity(gormDebtItem *models.DebtItem) *entities.DebtItem {
 	return &entities.DebtItem{
 		ID:                gormDebtItem.ID,
+		UserID:            gormDebtItem.UserID,
 		DebtListID:        gormDebtItem.DebtListID,
 		Amount:            gormDebtItem.Amount,
 		Currency:          gormDebtItem.Currency,

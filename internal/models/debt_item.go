@@ -9,6 +9,7 @@ import (
 
 type DebtItem struct {
 	ID                uuid.UUID     `json:"id" gorm:"type:uuid;primary_key"`
+	UserID            uuid.UUID     `json:"user_id" gorm:"type:uuid;not null;index"`
 	DebtListID        uuid.UUID     `json:"debt_list_id" gorm:"type:uuid;not null;index"`
 	Amount            decimal.Decimal `json:"amount" gorm:"type:decimal(15,2);not null"`
 	Currency          string        `json:"currency" gorm:"default:'Php'"`

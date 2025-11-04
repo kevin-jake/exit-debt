@@ -420,6 +420,7 @@ func (s *debtService) CreateDebtItem(ctx context.Context, userID uuid.UUID, req 
 
 	debtItem := &entities.DebtItem{
 		ID:                uuid.New(),
+		UserID:            userID,
 		DebtListID:        req.DebtListID,
 		Amount:            amount,
 		Currency:          currency,
