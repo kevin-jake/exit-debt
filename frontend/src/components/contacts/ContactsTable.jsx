@@ -241,9 +241,6 @@ export const ContactsTable = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Contact Info
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      Type
-                    </th>
                     <th
                       className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
                       onClick={() => handleSort('created_at')}
@@ -323,11 +320,6 @@ export const ContactsTable = () => {
                             <span className="text-muted-foreground/60">No contact info</span>
                           )}
                         </div>
-                      </td>
-                      <td className="whitespace-nowrap px-6 py-4">
-                        <span className="inline-flex rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                          Regular Contact
-                        </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                         {formatRelativeTime(contact.created_at)}

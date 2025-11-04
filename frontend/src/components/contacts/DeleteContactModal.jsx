@@ -1,12 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useContactsStore } from '@stores/contactsStore'
+import { useDebtsStore } from '@stores/debtsStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
 
 export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
   const [isLoading, setIsLoading] = useState(false)
   const deleteContact = useContactsStore((state) => state.deleteContact)
+  const debts = useDebtsStore((state) => state.debts)
   const showSuccess = useNotificationsStore((state) => state.success)
   const showError = useNotificationsStore((state) => state.error)
+
+  // Get debts associated with this contact
+  const associatedDebts = debts.filter((debt) => debt.contact_id === contact.id)
+  const hasAssociatedDebts = associatedDebts.length > 0
+  const displayDebts = associatedDebts.slice(0, 10)
+  const remainingDebtsCount = Math.max(0, associatedDebts.length - 10)
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -77,24 +85,75 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
                 />
               </svg>
             </div>
-            <h3 className="mb-2 text-center text-lg font-medium text-foreground">Are you sure?</h3>
+            <h3 className="mb-2 text-center text-lg font-medium text-foreground">
+              {hasAssociatedDebts ? 'Cannot Delete Contact' : 'Are you sure?'}
+            </h3>
             <p className="text-center text-sm text-muted-foreground">
-              This will permanently delete <span className="font-medium">"{contact.name}"</span> and
-              all associated data. This action cannot be undone.
+              {hasAssociatedDebts ? (
+                <>
+                  This contact cannot be deleted because there are{' '}
+                  <span className="font-medium">{associatedDebts.length}</span> debt list
+                  {associatedDebts.length === 1 ? '' : 's'} associated with{' '}
+                  <span className="font-medium">"{contact.name}"</span>. Please delete or reassign
+                  the following debt list{associatedDebts.length === 1 ? '' : 's'} first:
+                </>
+              ) : (
+                <>
+                  This will permanently delete <span className="font-medium">"{contact.name}"</span>{' '}
+                  and all associated data. This action cannot be undone.
+                </>
+              )}
             </p>
           </div>
 
+          {hasAssociatedDebts && (
+            <div className="mb-6 max-h-60 overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
+              <ul className="space-y-2">
+                {displayDebts.map((debt) => (
+                  <li
+                    key={debt.id}
+                    className="flex items-start justify-between rounded-md bg-card p-3 text-sm"
+                  >
+                    <div className="flex-1">
+                      <div className="font-medium text-foreground">
+                        {debt.debt_type === 'owed_to_me' ? '↓ Owed to me' : '↑ I owe'}
+                      </div>
+                      {debt.description && (
+                        <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          {debt.description}
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-3 text-right">
+                      <div className="font-semibold text-foreground">
+                        {debt.currency} {parseFloat(debt.total_amount).toLocaleString()}
+                      </div>
+                      <div className="text-xs capitalize text-muted-foreground">{debt.status}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {remainingDebtsCount > 0 && (
+                <div className="mt-3 text-center text-xs text-muted-foreground">
+                  and {remainingDebtsCount} more debt list{remainingDebtsCount === 1 ? '' : 's'}...
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-end space-x-3">
             <button type="button" onClick={onClose} className="btn-secondary" disabled={isLoading}>
-              Cancel
+              {hasAssociatedDebts ? 'Close' : 'Cancel'}
             </button>
-            <button
-              onClick={handleDelete}
-              className="btn-destructive disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Deleting...' : 'Delete Contact'}
-            </button>
+            {!hasAssociatedDebts && (
+              <button
+                onClick={handleDelete}
+                className="btn-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Deleting...' : 'Delete Contact'}
+              </button>
+            )}
           </div>
         </div>
       </div>
