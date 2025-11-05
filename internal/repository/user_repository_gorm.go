@@ -87,6 +87,15 @@ func (r *userRepositoryGORM) ExistsByEmail(ctx context.Context, email string) (b
 	return count > 0, nil
 }
 
+
+func (r *userRepositoryGORM) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&models.User{}).Where("phone = ?", phone).Count(&count).Error; err != nil {
+		return false, fmt.Errorf("failed to check if user exists by phone: %w", err)
+	}
+	return count > 0, nil
+}
+
 // entityToGORM converts a domain entity to GORM model
 func (r *userRepositoryGORM) entityToGORM(user *entities.User) *models.User {
 	return &models.User{

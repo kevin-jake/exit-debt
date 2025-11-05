@@ -57,6 +57,17 @@ func (s *authService) Register(ctx context.Context, req *entities.CreateUserRequ
 		return nil, entities.ErrUserAlreadyExists
 	}
 
+	// Check if phone number already exists (if provided)
+	if req.Phone != nil && *req.Phone != "" {
+		phoneExists, err := s.userRepo.ExistsByPhone(ctx, *req.Phone)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if phone exists: %w", err)
+		}
+		if phoneExists {
+			return nil, entities.ErrPhoneNumberExists
+		}
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {

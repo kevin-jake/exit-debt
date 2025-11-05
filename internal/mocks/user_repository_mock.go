@@ -49,3 +49,8 @@ func (m *MockUserRepository) ExistsByEmail(ctx context.Context, email string) (b
 	args := m.Called(ctx, email)
 	return args.Bool(0), args.Error(1)
 }
+
+func (m *MockUserRepository) ExistsByPhone(ctx context.Context, phone string) (bool, error) {
+	args := m.Called(ctx, phone)
+	return args.Bool(0), args.Error(1)
+}

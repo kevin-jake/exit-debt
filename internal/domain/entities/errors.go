@@ -7,6 +7,7 @@ var (
 	// User errors
 	ErrUserNotFound      = errors.New("user not found")
 	ErrUserAlreadyExists = errors.New("user already exists")
+	ErrPhoneNumberExists = errors.New("phone number already exists")
 	ErrInvalidEmail      = errors.New("invalid email address")
 	ErrInvalidPassword   = errors.New("invalid password")
 	ErrInvalidFirstName  = errors.New("first name is required")

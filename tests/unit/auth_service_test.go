@@ -36,6 +36,7 @@ func TestAuthService_Register(t *testing.T) {
 			},
 			setupMocks: func(userRepo *mocks.MockUserRepository, contactService *mocks.MockContactService) {
 				userRepo.On("ExistsByEmail", mock.Anything, "test@example.com").Return(false, nil)
+				userRepo.On("ExistsByPhone", mock.Anything, "+1234567890").Return(false, nil)
 				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.User")).Return(nil)
 				contactService.On("CreateContactsForNewUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), "test@example.com").Return(nil)
 			},
@@ -98,6 +99,67 @@ func TestAuthService_Register(t *testing.T) {
 			setupMocks:    func(userRepo *mocks.MockUserRepository, contactService *mocks.MockContactService) {},
 			expectedError: entities.ErrInvalidFirstName,
 			expectSuccess: false,
+		},
+		{
+			name: "phone number already exists",
+			request: &entities.CreateUserRequest{
+				Email:     "newuser@example.com",
+				Password:  "password123",
+				FirstName: "Jane",
+				LastName:  "Smith",
+				Phone:     stringPtr("+1234567890"),
+			},
+			setupMocks: func(userRepo *mocks.MockUserRepository, contactService *mocks.MockContactService) {
+				userRepo.On("ExistsByEmail", mock.Anything, "newuser@example.com").Return(false, nil)
+				userRepo.On("ExistsByPhone", mock.Anything, "+1234567890").Return(true, nil)
+			},
+			expectedError: entities.ErrPhoneNumberExists,
+			expectSuccess: false,
+		},
+		{
+			name: "successful registration without phone",
+			request: &entities.CreateUserRequest{
+				Email:     "nophone@example.com",
+				Password:  "password123",
+				FirstName: "Alice",
+				LastName:  "Johnson",
+				Phone:     nil,
+			},
+			setupMocks: func(userRepo *mocks.MockUserRepository, contactService *mocks.MockContactService) {
+				userRepo.On("ExistsByEmail", mock.Anything, "nophone@example.com").Return(false, nil)
+				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.User")).Return(nil)
+				contactService.On("CreateContactsForNewUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), "nophone@example.com").Return(nil)
+			},
+			expectedError: nil,
+			expectSuccess: true,
+			validateResult: func(t *testing.T, resp *entities.RegisterResponse) {
+				assert.Equal(t, "nophone@example.com", resp.User.Email)
+				assert.Equal(t, "Alice", resp.User.FirstName)
+				assert.Equal(t, "Johnson", resp.User.LastName)
+				assert.Nil(t, resp.User.Phone)
+			},
+		},
+		{
+			name: "successful registration with empty phone string",
+			request: &entities.CreateUserRequest{
+				Email:     "emptyphone@example.com",
+				Password:  "password123",
+				FirstName: "Bob",
+				LastName:  "Williams",
+				Phone:     stringPtr(""),
+			},
+			setupMocks: func(userRepo *mocks.MockUserRepository, contactService *mocks.MockContactService) {
+				userRepo.On("ExistsByEmail", mock.Anything, "emptyphone@example.com").Return(false, nil)
+				userRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.User")).Return(nil)
+				contactService.On("CreateContactsForNewUser", mock.Anything, mock.AnythingOfType("uuid.UUID"), "emptyphone@example.com").Return(nil)
+			},
+			expectedError: nil,
+			expectSuccess: true,
+			validateResult: func(t *testing.T, resp *entities.RegisterResponse) {
+				assert.Equal(t, "emptyphone@example.com", resp.User.Email)
+				assert.Equal(t, "Bob", resp.User.FirstName)
+				assert.Equal(t, "Williams", resp.User.LastName)
+			},
 		},
 	}
 
