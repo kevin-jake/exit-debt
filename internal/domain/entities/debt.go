@@ -41,7 +41,6 @@ type DebtList struct {
 // DebtItem represents the core debt item (payment) entity
 type DebtItem struct {
 	ID                uuid.UUID
-	UserID            uuid.UUID
 	DebtListID        uuid.UUID
 	Amount            decimal.Decimal
 	Currency          string
@@ -198,9 +197,6 @@ func (d *DebtList) IsValid() error {
 
 // IsValid validates the debt item entity
 func (d *DebtItem) IsValid() error {
-	if d.UserID == uuid.Nil {
-		return ErrInvalidInput
-	}
 	if d.DebtListID == uuid.Nil {
 		return ErrInvalidInput
 	}

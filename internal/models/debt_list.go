@@ -77,7 +77,6 @@ type UpdateDebtListRequest struct {
 // DebtItemResponse represents a payment without the circular reference to DebtList
 type DebtItemResponse struct {
 	ID            uuid.UUID     `json:"id"`
-	UserID        uuid.UUID     `json:"user_id"`
 	DebtListID    uuid.UUID     `json:"debt_list_id"`
 	Amount        decimal.Decimal `json:"amount"`
 	Currency      string        `json:"currency"`
@@ -120,7 +119,6 @@ type DebtListResponse struct {
 func (di *DebtItem) ToDebtItemResponse() DebtItemResponse {
 	return DebtItemResponse{
 		ID:            di.ID,
-		UserID:        di.UserID,
 		DebtListID:    di.DebtListID,
 		Amount:        di.Amount,
 		Currency:      di.Currency,
