@@ -103,6 +103,7 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
       if (calculated === 0) {
         setValue('payment_type', 'one_time')
         setValue('number_of_payments', '')
+        setValue('due_date', '') // Clear due date to allow switching back
         return
       }
 
