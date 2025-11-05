@@ -106,17 +106,19 @@ func TestUser_FullName(t *testing.T) {
 	assert.Equal(t, "John Doe", fullName)
 }
 
-func TestContact_IsValid(t *testing.T) {
+func TestUserContact_IsValid(t *testing.T) {
 	tests := []struct {
 		name          string
-		contact       *entities.Contact
+		userContact   *entities.UserContact
 		expectedError error
 		expectValid   bool
 	}{
 		{
-			name: "valid contact",
-			contact: &entities.Contact{
+			name: "valid user contact",
+			userContact: &entities.UserContact{
 				ID:        uuid.New(),
+				UserID:    uuid.New(),
+				ContactID: uuid.New(),
 				Name:      "Test Contact",
 				Email:     stringPtr("test@example.com"),
 				Phone:     stringPtr("+1234567890"),
@@ -128,10 +130,12 @@ func TestContact_IsValid(t *testing.T) {
 		},
 		{
 			name: "missing name",
-			contact: &entities.Contact{
-				ID:    uuid.New(),
-				Name:  "",
-				Email: stringPtr("test@example.com"),
+			userContact: &entities.UserContact{
+				ID:        uuid.New(),
+				UserID:    uuid.New(),
+				ContactID: uuid.New(),
+				Name:      "",
+				Email:     stringPtr("test@example.com"),
 			},
 			expectedError: entities.ErrInvalidContactName,
 			expectValid:   false,
@@ -140,7 +144,7 @@ func TestContact_IsValid(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.contact.IsValid()
+			err := tt.userContact.IsValid()
 
 			if tt.expectValid {
 				assert.NoError(t, err)
@@ -152,29 +156,29 @@ func TestContact_IsValid(t *testing.T) {
 	}
 }
 
-func TestContact_HasEmail(t *testing.T) {
+func TestUserContact_HasEmail(t *testing.T) {
 	tests := []struct {
-		name     string
-		contact  *entities.Contact
-		expected bool
+		name        string
+		userContact *entities.UserContact
+		expected    bool
 	}{
 		{
 			name: "has email",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Email: stringPtr("test@example.com"),
 			},
 			expected: true,
 		},
 		{
 			name: "nil email",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Email: nil,
 			},
 			expected: false,
 		},
 		{
 			name: "empty email",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Email: stringPtr(""),
 			},
 			expected: false,
@@ -183,35 +187,35 @@ func TestContact_HasEmail(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.contact.HasEmail()
+			result := tt.userContact.HasEmail()
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-func TestContact_HasPhone(t *testing.T) {
+func TestUserContact_HasPhone(t *testing.T) {
 	tests := []struct {
-		name     string
-		contact  *entities.Contact
-		expected bool
+		name        string
+		userContact *entities.UserContact
+		expected    bool
 	}{
 		{
 			name: "has phone",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Phone: stringPtr("+1234567890"),
 			},
 			expected: true,
 		},
 		{
 			name: "nil phone",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Phone: nil,
 			},
 			expected: false,
 		},
 		{
 			name: "empty phone",
-			contact: &entities.Contact{
+			userContact: &entities.UserContact{
 				Phone: stringPtr(""),
 			},
 			expected: false,
@@ -220,7 +224,7 @@ func TestContact_HasPhone(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.contact.HasPhone()
+			result := tt.userContact.HasPhone()
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -26,14 +26,14 @@ func NewContactService(contactRepo interfaces.ContactRepository, userRepo interf
 	}
 }
 
-func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, req *entities.CreateContactRequest) (*entities.Contact, error) {
+func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, req *entities.CreateContactRequest) (*entities.ContactResponse, error) {
 	// Validate input
 	if err := s.validateCreateContactRequest(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
 	// Check if contact with same email already exists for this user
-	if req.Email != nil {
+	if req.Email != nil && *req.Email != "" {
 		exists, err := s.contactRepo.ExistsByEmailForUser(ctx, userID, *req.Email)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if contact exists: %w", err)
@@ -43,21 +43,10 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		}
 	}
 
-	// Check if contact with same phone number already exists for this user
-	if req.Phone != nil {
-		exists, err := s.contactRepo.ExistsByPhoneForUser(ctx, userID, *req.Phone)
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if contact exists: %w", err)
-		}
-		if exists {
-			return nil, entities.ErrContactPhoneExists
-		}
-	}
-
 	// Check if this contact is also a user (by email)
 	var isUser bool
 	var userIDRef *uuid.UUID
-	if req.Email != nil {
+	if req.Email != nil && *req.Email != "" {
 		user, err := s.userRepo.GetByEmail(ctx, *req.Email)
 		if err == nil {
 			isUser = true
@@ -67,85 +56,35 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		}
 	}
 
-	// Try to find existing contact by email first
-	var contact *entities.Contact
-	if req.Email != nil {
-		existingContact, err := s.contactRepo.GetByEmail(ctx, *req.Email)
-		if err == nil {
-			contact = existingContact
-		} else if err != entities.ErrContactNotFound {
-			return nil, fmt.Errorf("failed to get existing contact: %w", err)
-		}
+	// Create new contact (minimal identity)
+	contact := &entities.Contact{
+		ID:         uuid.New(),
+		IsUser:     isUser,
+		UserIDRef:  userIDRef,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
 	}
 
-	// If no contact found by email, try to find by phone
-	if contact == nil && req.Phone != nil {
-		existingContact, err := s.contactRepo.GetByPhone(ctx, *req.Phone)
-		if err == nil {
-			contact = existingContact
-		} else if err != entities.ErrContactNotFound {
-			return nil, fmt.Errorf("failed to get existing contact: %w", err)
-		}
+	if err := s.contactRepo.Create(ctx, contact); err != nil {
+		return nil, fmt.Errorf("failed to create contact: %w", err)
 	}
 
-	if contact == nil {
-		// Create new contact
-		contact = &entities.Contact{
-			ID:         uuid.New(),
-			Name:       req.Name,
-			Email:      req.Email,
-			Phone:      req.Phone,
-			Notes:      req.Notes,
-			IsUser:     isUser,
-			UserIDRef:  userIDRef,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
-		}
-
-		// Validate contact entity
-		if err := contact.IsValid(); err != nil {
-			return nil, fmt.Errorf("invalid contact entity: %w", err)
-		}
-
-		if err := s.contactRepo.Create(ctx, contact); err != nil {
-			return nil, fmt.Errorf("failed to create contact: %w", err)
-		}
-	} else {
-		// Update existing contact with new information if provided
-		updated := false
-		if req.Name != "" && contact.Name != req.Name {
-			contact.Name = req.Name
-			updated = true
-		}
-		if req.Phone != nil && (contact.Phone == nil || *contact.Phone != *req.Phone) {
-			contact.Phone = req.Phone
-			updated = true
-		}
-		if req.Notes != nil && (contact.Notes == nil || *contact.Notes != *req.Notes) {
-			contact.Notes = req.Notes
-			updated = true
-		}
-		if isUser && !contact.IsUser {
-			contact.IsUser = true
-			contact.UserIDRef = userIDRef
-			updated = true
-		}
-		
-		if updated {
-			contact.UpdatedAt = time.Now()
-			if err := s.contactRepo.Update(ctx, contact); err != nil {
-				return nil, fmt.Errorf("failed to update existing contact: %w", err)
-			}
-		}
-	}
-
-	// Create user-contact relationship
+	// Create user-contact relationship with user-specific data
 	userContact := &entities.UserContact{
 		ID:        uuid.New(),
 		UserID:    userID,
 		ContactID: contact.ID,
+		Name:      req.Name,
+		Email:     req.Email,
+		Phone:     req.Phone,
+		Notes:     req.Notes,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
+	}
+
+	// Validate user contact entity
+	if err := userContact.IsValid(); err != nil {
+		return nil, fmt.Errorf("invalid contact entity: %w", err)
 	}
 
 	if err := s.contactRepo.CreateUserContactRelation(ctx, userContact); err != nil {
@@ -153,7 +92,7 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 	}
 
 	// Create reciprocal contact if this contact is also a user
-	if req.Email != nil && isUser {
+	if req.Email != nil && *req.Email != "" && isUser {
 		if err := s.CreateReciprocalContact(ctx, *req.Email, userID); err != nil {
 			// Log the error but don't fail contact creation
 			logger := zerolog.Ctx(ctx)
@@ -166,90 +105,163 @@ func (s *contactService) CreateContact(ctx context.Context, userID uuid.UUID, re
 		}
 	}
 
-	return contact, nil
+	// Build and return ContactResponse
+	return &entities.ContactResponse{
+		ID:        contact.ID,
+		Name:      userContact.Name,
+		Email:     userContact.Email,
+		Phone:     userContact.Phone,
+		Notes:     userContact.Notes,
+		IsUser:    contact.IsUser,
+		UserIDRef: contact.UserIDRef,
+		CreatedAt: contact.CreatedAt,
+		UpdatedAt: contact.UpdatedAt,
+	}, nil
 }
 
-func (s *contactService) GetContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.Contact, error) {
-	// Check if user has access to this contact
-	_, err := s.contactRepo.GetUserContactRelation(ctx, userID, id)
+func (s *contactService) GetContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.ContactResponse, error) {
+	// Get user contact relation which contains user-specific data
+	userContact, err := s.contactRepo.GetUserContactRelation(ctx, userID, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify contact access: %w", err)
 	}
 
+	// Get the contact entity for IsUser and UserIDRef
 	contact, err := s.contactRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contact: %w", err)
 	}
 
-	return contact, nil
+	// Build and return ContactResponse combining both
+	return &entities.ContactResponse{
+		ID:        contact.ID,
+		Name:      userContact.Name,
+		Email:     userContact.Email,
+		Phone:     userContact.Phone,
+		Notes:     userContact.Notes,
+		IsUser:    contact.IsUser,
+		UserIDRef: contact.UserIDRef,
+		CreatedAt: userContact.CreatedAt,
+		UpdatedAt: userContact.UpdatedAt,
+	}, nil
 }
 
-func (s *contactService) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
-	contacts, err := s.contactRepo.GetUserContacts(ctx, userID)
+func (s *contactService) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.ContactResponse, error) {
+	// Get user contacts with user-specific data
+	userContacts, err := s.contactRepo.GetUserContacts(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user contacts: %w", err)
 	}
 
-	return contacts, nil
+	// Build ContactResponse for each user contact
+	responses := make([]entities.ContactResponse, 0, len(userContacts))
+	for _, uc := range userContacts {
+		// Get the contact to retrieve IsUser and UserIDRef
+		contact, err := s.contactRepo.GetByID(ctx, uc.ContactID)
+		if err != nil {
+			// Log but continue
+			continue
+		}
+		
+		responses = append(responses, entities.ContactResponse{
+			ID:        contact.ID,
+			Name:      uc.Name,
+			Email:     uc.Email,
+			Phone:     uc.Phone,
+			Notes:     uc.Notes,
+			IsUser:    contact.IsUser,
+			UserIDRef: contact.UserIDRef,
+			CreatedAt: uc.CreatedAt,
+			UpdatedAt: uc.UpdatedAt,
+		})
+	}
+
+	return responses, nil
 }
 
-func (s *contactService) UpdateContact(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateContactRequest) (*entities.Contact, error) {
+func (s *contactService) UpdateContact(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateContactRequest) (*entities.ContactResponse, error) {
 	// Validate input
 	if err := s.validateUpdateContactRequest(req); err != nil {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	// Check if user has access to this contact
-	_, err := s.contactRepo.GetUserContactRelation(ctx, userID, id)
+	// Get the user contact relation (user-specific data)
+	userContact, err := s.contactRepo.GetUserContactRelation(ctx, userID, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify contact access: %w", err)
 	}
 
-	// Get the existing contact
+	// Get the contact entity
 	contact, err := s.contactRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get contact: %w", err)
 	}
 
-	// Update fields if provided
+	// Update user-specific fields in UserContact
 	if req.Name != nil {
-		contact.Name = *req.Name
+		userContact.Name = *req.Name
 	}
 	if req.Email != nil {
-		contact.Email = req.Email
-		// Check if this contact is also a user (by email)
-		if req.Email != nil {
-			user, err := s.userRepo.GetByEmail(ctx, *req.Email)
-			if err == nil {
-				contact.IsUser = true
-				contact.UserIDRef = &user.ID
-			} else if err == entities.ErrUserNotFound {
-				contact.IsUser = false
-				contact.UserIDRef = nil
-			} else {
-				return nil, fmt.Errorf("failed to check if email belongs to user: %w", err)
-			}
-		}
+		userContact.Email = req.Email
 	}
 	if req.Phone != nil {
-		contact.Phone = req.Phone
+		userContact.Phone = req.Phone
 	}
 	if req.Notes != nil {
-		contact.Notes = req.Notes
+		userContact.Notes = req.Notes
 	}
 
-	contact.UpdatedAt = time.Now()
+	userContact.UpdatedAt = time.Now()
 
-	// Validate updated contact entity
-	if err := contact.IsValid(); err != nil {
+	// Validate updated user contact entity
+	if err := userContact.IsValid(); err != nil {
 		return nil, fmt.Errorf("invalid updated contact entity: %w", err)
 	}
 
-	if err := s.contactRepo.Update(ctx, contact); err != nil {
-		return nil, fmt.Errorf("failed to update contact: %w", err)
+	// Check if email changed and if new email belongs to a user
+	if req.Email != nil && *req.Email != "" {
+		user, err := s.userRepo.GetByEmail(ctx, *req.Email)
+		if err == nil {
+			// Email belongs to a user - update Contact entity
+			contact.IsUser = true
+			contact.UserIDRef = &user.ID
+			contact.UpdatedAt = time.Now()
+			if err := s.contactRepo.Update(ctx, contact); err != nil {
+				return nil, fmt.Errorf("failed to update contact: %w", err)
+			}
+		} else if err == entities.ErrUserNotFound {
+			// Email doesn't belong to a user
+			if contact.IsUser {
+				// Was a user before, now isn't
+				contact.IsUser = false
+				contact.UserIDRef = nil
+				contact.UpdatedAt = time.Now()
+				if err := s.contactRepo.Update(ctx, contact); err != nil {
+					return nil, fmt.Errorf("failed to update contact: %w", err)
+				}
+			}
+		} else {
+			return nil, fmt.Errorf("failed to check if email belongs to user: %w", err)
+		}
 	}
 
-	return contact, nil
+	// Update the user contact relation
+	if err := s.contactRepo.UpdateUserContactRelation(ctx, userContact); err != nil {
+		return nil, fmt.Errorf("failed to update user contact relation: %w", err)
+	}
+
+	// Build and return ContactResponse
+	return &entities.ContactResponse{
+		ID:        contact.ID,
+		Name:      userContact.Name,
+		Email:     userContact.Email,
+		Phone:     userContact.Phone,
+		Notes:     userContact.Notes,
+		IsUser:    contact.IsUser,
+		UserIDRef: contact.UserIDRef,
+		CreatedAt: userContact.CreatedAt,
+		UpdatedAt: userContact.UpdatedAt,
+	}, nil
 }
 
 func (s *contactService) DeleteContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
@@ -268,92 +280,73 @@ func (s *contactService) DeleteContact(ctx context.Context, id uuid.UUID, userID
 }
 
 func (s *contactService) CreateContactsForNewUser(ctx context.Context, userID uuid.UUID, userEmail string) error {
-	// Find all contacts that have this user's email
-	existingContacts, err := s.contactRepo.GetContactsWithEmail(ctx, userEmail)
+	// Find all UserContact entries that have this user's email
+	userContactsWithEmail, err := s.contactRepo.GetUserContactsByEmail(ctx, userEmail)
 	if err != nil {
-		return fmt.Errorf("failed to get contacts with email: %w", err)
+		return fmt.Errorf("failed to get user contacts with email: %w", err)
 	}
 
-	if len(existingContacts) == 0 {
-		return nil // No existing contacts found with this email
+	if len(userContactsWithEmail) == 0 {
+		return nil // No existing user contacts found with this email
 	}
 
-	// For each existing contact, find all users who have this contact and create reciprocal contacts
-	for _, contact := range existingContacts {
-		// Get all user-contact relationships for this contact
-		userContactRelations, err := s.contactRepo.GetUserContactRelationsByContactID(ctx, contact.ID)
-		if err != nil {
-			// Log the error but continue with other contacts
+	// For each existing UserContact with matching email, create reciprocal contact
+	for _, uc := range userContactsWithEmail {
+		// Skip if this is the new user's own contact (shouldn't happen but just in case)
+		if uc.UserID == userID {
 			continue
 		}
 
-		// For each user who has this contact, create a reciprocal contact
-		for _, userContactRel := range userContactRelations {
-			// Skip if this is the new user (we don't want to create a contact for ourselves)
-			if userContactRel.UserID == userID {
-				continue
-			}
-
-			// Get the user details who owns this contact (from user_contacts.user_id)
-			contactOwner, err := s.userRepo.GetByID(ctx, userContactRel.UserID)
-			if err != nil {
-				// Log the error but continue with other users
-				continue
-			}
-
-			// Find or create a contact for the contact owner in the contacts table
-			var contactForOwner *entities.Contact
-			if contactOwner.Email != "" {
-				existingContact, err := s.contactRepo.GetByEmail(ctx, contactOwner.Email)
-				if err == nil {
-					contactForOwner = existingContact
-				} else if err == entities.ErrContactNotFound {
-					// Create new contact for the contact owner
-					contactForOwner = &entities.Contact{
-						ID:         uuid.New(),
-						Name:       contactOwner.FullName(),
-						Email:      &contactOwner.Email,
-						Phone:      contactOwner.Phone,
-						IsUser:     true,
-						UserIDRef:  &contactOwner.ID,
-						CreatedAt:  time.Now(),
-						UpdatedAt:  time.Now(),
-					}
-
-					if err := s.contactRepo.Create(ctx, contactForOwner); err != nil {
-						// Log the error but continue with other users
-						continue
-					}
-				} else {
-					// Log the error but continue with other users
-					continue
-				}
-			}
-
-			// Create user-contact relationship for the new user with the contact owner's contact
-			if contactForOwner != nil {
-				newUserContact := &entities.UserContact{
-					ID:        uuid.New(),
-					UserID:    userID,
-					ContactID: contactForOwner.ID, // Use the contact ID from the contacts table
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
-				}
-
-				if err := s.contactRepo.CreateUserContactRelation(ctx, newUserContact); err != nil {
-					// Log the error but continue with other users
-					continue
-				}
-			}
+		// Update the Contact to reference the new user
+		contact, err := s.contactRepo.GetByID(ctx, uc.ContactID)
+		if err != nil {
+			// Log the error but continue
+			continue
 		}
-
-		// Update the existing contact to reference the new user
 		contact.IsUser = true
 		contact.UserIDRef = &userID
 		contact.UpdatedAt = time.Now()
 		
-		if err := s.contactRepo.Update(ctx, &contact); err != nil {
-			// Log the error but continue with other contacts
+		if err := s.contactRepo.Update(ctx, contact); err != nil {
+			// Log the error but continue
+			continue
+		}
+
+		// Get the contact owner (the user who added this contact)
+		contactOwner, err := s.userRepo.GetByID(ctx, uc.UserID)
+		if err != nil {
+			// Log the error but continue
+			continue
+		}
+
+		// Create a new Contact entity for the contact owner
+		contactForOwner := &entities.Contact{
+			ID:        uuid.New(),
+			IsUser:    true,
+			UserIDRef: &contactOwner.ID,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if err := s.contactRepo.Create(ctx, contactForOwner); err != nil {
+			// Log the error but continue
+			continue
+		}
+
+		// Create UserContact for new user -> contact owner
+		reciprocalUserContact := &entities.UserContact{
+			ID:        uuid.New(),
+			UserID:    userID,
+			ContactID: contactForOwner.ID,
+			Name:      contactOwner.FirstName + " " + contactOwner.LastName,
+			Email:     &contactOwner.Email,
+			Phone:     contactOwner.Phone,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if err := s.contactRepo.CreateUserContactRelation(ctx, reciprocalUserContact); err != nil {
+			// Log the error but continue
 			continue
 		}
 	}
@@ -377,9 +370,9 @@ func (s *contactService) CreateReciprocalContact(ctx context.Context, contactEma
 		return fmt.Errorf("failed to get contact owner: %w", err)
 	}
 
-	// Check if the reciprocal contact already exists
+	// Check if the reciprocal contact already exists (by checking UserContact with contact owner's email)
 	if contactOwner.Email != "" {
-		exists, err := s.contactRepo.ExistsByEmailForUser(ctx, contactOwner.ID, contactOwner.Email)
+		exists, err := s.contactRepo.ExistsByEmailForUser(ctx, existingUser.ID, contactOwner.Email)
 		if err != nil {
 			return fmt.Errorf("failed to check if reciprocal contact exists: %w", err)
 		}
@@ -388,40 +381,27 @@ func (s *contactService) CreateReciprocalContact(ctx context.Context, contactEma
 		}
 	}
 
-	// Find or create contact for the contact owner
-	var contact *entities.Contact
-	if contactOwner.Email != "" {
-		existingContact, err := s.contactRepo.GetByEmail(ctx, contactOwner.Email)
-		if err == nil {
-			contact = existingContact
-		} else if err != entities.ErrContactNotFound {
-			return fmt.Errorf("failed to get existing contact for owner: %w", err)
-		}
+	// Create new Contact entity for the contact owner
+	contact := &entities.Contact{
+		ID:        uuid.New(),
+		IsUser:    true,
+		UserIDRef: &contactOwner.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
-	if contact == nil {
-		// Create new contact for the contact owner
-		contact = &entities.Contact{
-			ID:         uuid.New(),
-			Name:       contactOwner.FullName(),
-			Email:      &contactOwner.Email,
-			Phone:      contactOwner.Phone,
-			IsUser:     true,
-			UserIDRef:  &contactOwner.ID,
-			CreatedAt:  time.Now(),
-			UpdatedAt:  time.Now(),
-		}
-
-		if err := s.contactRepo.Create(ctx, contact); err != nil {
-			return fmt.Errorf("failed to create reciprocal contact: %w", err)
-		}
+	if err := s.contactRepo.Create(ctx, contact); err != nil {
+		return fmt.Errorf("failed to create reciprocal contact: %w", err)
 	}
 
-	// Create user-contact relationship for the existing user
+	// Create user-contact relationship for the existing user with user-specific data
 	userContact := &entities.UserContact{
 		ID:        uuid.New(),
 		UserID:    existingUser.ID,
 		ContactID: contact.ID,
+		Name:      contactOwner.FirstName + " " + contactOwner.LastName,
+		Email:     &contactOwner.Email,
+		Phone:     contactOwner.Phone,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

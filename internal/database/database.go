@@ -36,6 +36,15 @@ func NewDatabase(dsn string) (*Database, error) {
 		return nil, fmt.Errorf("failed to migrate database: %v", err)
 	}
 
+	// Add unique constraint on user_contacts (user_id, email)
+	if err := db.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_user_contacts_user_email 
+		ON user_contacts(user_id, email) 
+		WHERE email IS NOT NULL
+	`).Error; err != nil {
+		return nil, fmt.Errorf("failed to create unique index on user_contacts: %v", err)
+	}
+
 	log.Println("Database connected and migrated successfully")
 
 	return &Database{DB: db}, nil

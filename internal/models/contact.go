@@ -8,10 +8,6 @@ import (
 
 type Contact struct {
 	ID          uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
-	Name        string    `json:"name" gorm:"not null;index"`
-	Email       *string   `json:"email" gorm:"index"`
-	Phone       *string   `json:"phone" gorm:"uniqueIndex"`
-	Notes       *string   `json:"notes"`
 	IsUser      bool      `json:"is_user" gorm:"default:false;index"`
 	UserIDRef   *uuid.UUID `json:"user_id_ref" gorm:"type:uuid;index"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -24,10 +20,15 @@ type Contact struct {
 }
 
 // UserContact represents the many-to-many relationship between users and contacts
+// with user-specific contact information
 type UserContact struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key"`
 	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;not null;index"`
 	ContactID uuid.UUID `json:"contact_id" gorm:"type:uuid;not null;index"`
+	Name      string    `json:"name" gorm:"not null;index"`
+	Email     *string   `json:"email" gorm:"index"`
+	Phone     *string   `json:"phone"`
+	Notes     *string   `json:"notes"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	

@@ -50,7 +50,7 @@ func (suite *UserContactDebtWorkflowTestSuite) SetupSuite() {
 	// Initialize repositories
 	suite.userRepo = repository.NewUserRepositoryGORM(db)
 	suite.contactRepo = repository.NewContactRepositoryGORM(db)
-	suite.debtListRepo = repository.NewDebtListRepositoryGORM(db)
+	suite.debtListRepo = repository.NewDebtListRepositoryGORM(db, suite.contactRepo)
 	suite.debtItemRepo = repository.NewDebtItemRepositoryGORM(db)
 
 	// Initialize services

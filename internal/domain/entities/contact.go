@@ -6,13 +6,9 @@ import (
 	"github.com/google/uuid"
 )
 
-// Contact represents the core contact entity
+// Contact represents the core contact entity (minimal identity)
 type Contact struct {
 	ID         uuid.UUID
-	Name       string
-	Email      *string
-	Phone      *string
-	Notes      *string
 	IsUser     bool
 	UserIDRef  *uuid.UUID
 	CreatedAt  time.Time
@@ -20,10 +16,15 @@ type Contact struct {
 }
 
 // UserContact represents the many-to-many relationship between users and contacts
+// with user-specific contact information
 type UserContact struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
 	ContactID uuid.UUID
+	Name      string
+	Email     *string
+	Phone     *string
+	Notes     *string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -44,20 +45,34 @@ type UpdateContactRequest struct {
 	Notes *string `json:"notes"`
 }
 
-// IsValid validates the contact entity
-func (c *Contact) IsValid() error {
-	if c.Name == "" {
+// ContactResponse represents a contact with user-specific information
+// This combines Contact entity (identity, IsUser) with UserContact (user-specific data)
+type ContactResponse struct {
+	ID        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	Email     *string    `json:"email"`
+	Phone     *string    `json:"phone"`
+	Notes     *string    `json:"notes"`
+	IsUser    bool       `json:"is_user"`
+	UserIDRef *uuid.UUID `json:"user_id_ref,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+// IsValid validates the user contact entity
+func (uc *UserContact) IsValid() error {
+	if uc.Name == "" {
 		return ErrInvalidContactName
 	}
 	return nil
 }
 
-// HasEmail returns true if the contact has an email address
-func (c *Contact) HasEmail() bool {
-	return c.Email != nil && *c.Email != ""
+// HasEmail returns true if the user contact has an email address
+func (uc *UserContact) HasEmail() bool {
+	return uc.Email != nil && *uc.Email != ""
 }
 
-// HasPhone returns true if the contact has a phone number
-func (c *Contact) HasPhone() bool {
-	return c.Phone != nil && *c.Phone != ""
+// HasPhone returns true if the user contact has a phone number
+func (uc *UserContact) HasPhone() bool {
+	return uc.Phone != nil && *uc.Phone != ""
 }

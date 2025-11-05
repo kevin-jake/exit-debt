@@ -64,7 +64,7 @@ func main() {
 	// Initialize repositories
 	userRepo := repository.NewUserRepositoryGORM(db.DB)
 	contactRepo := repository.NewContactRepositoryGORM(db.DB)
-	debtListRepo := repository.NewDebtListRepositoryGORM(db.DB)
+	debtListRepo := repository.NewDebtListRepositoryGORM(db.DB, contactRepo)
 	debtItemRepo := repository.NewDebtItemRepositoryGORM(db.DB)
 
 	// Initialize services with dependency injection

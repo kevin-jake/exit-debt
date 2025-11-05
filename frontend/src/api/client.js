@@ -98,29 +98,29 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(contactData),
     })
-
+    console.log(response)
     return {
-      id: response.ID,
-      name: response.Name,
-      email: response.Email,
-      phone: response.Phone,
-      notes: response.Notes,
-      created_at: response.CreatedAt,
-      updated_at: response.UpdatedAt,
+      id: response.id,
+      name: response.name,
+      email: response.email,
+      phone: response.phone,
+      notes: response.notes,
+      created_at: response.created_at,
+      updated_at: response.updated_at,
     }
   }
 
   async getContacts() {
     const response = await this.request('/contacts')
-
+    console.log(response)
     return response.map((contact) => ({
-      id: contact.ID,
-      name: contact.Name,
-      email: contact.Email,
-      phone: contact.Phone,
-      notes: contact.Notes,
-      created_at: contact.CreatedAt,
-      updated_at: contact.UpdatedAt,
+      id: contact.id,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      notes: contact.notes,
+      created_at: contact.created_at,
+      updated_at: contact.updated_at,
     }))
   }
 
@@ -128,13 +128,13 @@ class ApiClient {
     const response = await this.request(`/contacts/${id}`)
 
     return {
-      id: response.ID,
-      name: response.Name,
-      email: response.Email,
-      phone: response.Phone,
-      notes: response.Notes,
-      created_at: response.CreatedAt,
-      updated_at: response.UpdatedAt,
+      id: response.id,
+      name: response.name,
+      email: response.email,
+      phone: response.phone,
+      notes: response.notes,
+      created_at: response.created_at,
+      updated_at: response.updated_at,
     }
   }
 
@@ -145,13 +145,13 @@ class ApiClient {
     })
 
     return {
-      id: response.ID,
-      name: response.Name,
-      email: response.Email,
-      phone: response.Phone,
-      notes: response.Notes,
-      created_at: response.CreatedAt,
-      updated_at: response.UpdatedAt,
+      id: response.id,
+      name: response.name,
+      email: response.email,
+      phone: response.phone,
+      notes: response.notes,
+      created_at: response.created_at,
+      updated_at: response.updated_at,
     }
   }
 
@@ -185,13 +185,13 @@ class ApiClient {
       number_of_payments: debt.number_of_payments,
       contact: debt.contact
         ? {
-            id: debt.contact.ID,
-            name: debt.contact.Name,
-            email: debt.contact.Email,
-            phone: debt.contact.Phone,
-            notes: debt.contact.Notes,
-            created_at: debt.contact.CreatedAt,
-            updated_at: debt.contact.UpdatedAt,
+            id: debt.contact.id,
+            name: debt.contact.name,
+            email: debt.contact.email,
+            phone: debt.contact.phone,
+            notes: debt.contact.notes,
+            created_at: debt.contact.created_at,
+            updated_at: debt.contact.updated_at,
           }
         : undefined,
     }))

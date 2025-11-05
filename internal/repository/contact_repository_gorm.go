@@ -47,40 +47,24 @@ func (r *contactRepositoryGORM) GetByID(ctx context.Context, id uuid.UUID) (*ent
 	return r.gormToEntity(&gormContact), nil
 }
 
-func (r *contactRepositoryGORM) GetByEmail(ctx context.Context, email string) (*entities.Contact, error) {
-	var gormContact models.Contact
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&gormContact).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, entities.ErrContactNotFound
-		}
-		return nil, fmt.Errorf("failed to get contact by email: %w", err)
-	}
-	return r.gormToEntity(&gormContact), nil
-}
 
-func (r *contactRepositoryGORM) GetByPhone(ctx context.Context, phone string) (*entities.Contact, error) {
-	var gormContact models.Contact
-	if err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&gormContact).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, entities.ErrContactNotFound
-		}
-		return nil, fmt.Errorf("failed to get contact by phone: %w", err)
-	}
-	return r.gormToEntity(&gormContact), nil
-}
-
-func (r *contactRepositoryGORM) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
+func (r *contactRepositoryGORM) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.UserContact, error) {
 	var userContacts []models.UserContact
-	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ?", userID).Order("\"Contact\".\"name\" ASC").Find(&userContacts).Error; err != nil {
+	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ?", userID).Order("user_contacts.name ASC").Find(&userContacts).Error; err != nil {
 		return nil, fmt.Errorf("failed to get user contacts: %w", err)
 	}
 
-	contacts := make([]entities.Contact, len(userContacts))
+	result := make([]entities.UserContact, len(userContacts))
 	for i, uc := range userContacts {
-		contacts[i] = *r.gormToEntity(&uc.Contact)
+		userContact := r.userContactGormToEntity(&uc)
+		// Attach Contact info (IsUser, UserIDRef)
+		if uc.Contact.ID != uuid.Nil {
+			userContact.ContactID = uc.Contact.ID
+		}
+		result[i] = *userContact
 	}
 
-	return contacts, nil
+	return result, nil
 }
 
 func (r *contactRepositoryGORM) Update(ctx context.Context, contact *entities.Contact) error {
@@ -140,32 +124,25 @@ func (r *contactRepositoryGORM) DeleteUserContactRelation(ctx context.Context, u
 
 func (r *contactRepositoryGORM) ExistsByEmailForUser(ctx context.Context, userID uuid.UUID, email string) (bool, error) {
 	var count int64
-	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ? AND \"Contact\".\"email\" = ?", userID, email).Model(&models.UserContact{}).Count(&count).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&models.UserContact{}).Where("user_id = ? AND email = ?", userID, email).Count(&count).Error; err != nil {
 		return false, fmt.Errorf("failed to check if contact exists by email for user: %w", err)
 	}
 	return count > 0, nil
 }
 
-func (r *contactRepositoryGORM) ExistsByPhoneForUser(ctx context.Context, userID uuid.UUID, phone string) (bool, error) {
-	var count int64
-	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.user_id = ? AND \"Contact\".\"phone\" = ?", userID, phone).Model(&models.UserContact{}).Count(&count).Error; err != nil {
-		return false, fmt.Errorf("failed to check if contact exists by phone for user: %w", err)
-	}
-	return count > 0, nil
-}
 
-func (r *contactRepositoryGORM) GetContactsWithEmail(ctx context.Context, email string) ([]entities.Contact, error) {
-	var gormContacts []models.Contact
-	if err := r.db.WithContext(ctx).Where("email = ?", email).Find(&gormContacts).Error; err != nil {
-		return nil, fmt.Errorf("failed to get contacts with email: %w", err)
+func (r *contactRepositoryGORM) GetUserContactsByEmail(ctx context.Context, email string) ([]entities.UserContact, error) {
+	var gormUserContacts []models.UserContact
+	if err := r.db.WithContext(ctx).Joins("Contact").Where("user_contacts.email = ?", email).Find(&gormUserContacts).Error; err != nil {
+		return nil, fmt.Errorf("failed to get user contacts by email: %w", err)
 	}
 
-	contacts := make([]entities.Contact, len(gormContacts))
-	for i, gc := range gormContacts {
-		contacts[i] = *r.gormToEntity(&gc)
+	userContacts := make([]entities.UserContact, len(gormUserContacts))
+	for i, guc := range gormUserContacts {
+		userContacts[i] = *r.userContactGormToEntity(&guc)
 	}
 
-	return contacts, nil
+	return userContacts, nil
 }
 
 func (r *contactRepositoryGORM) GetUserContactRelationsByContactID(ctx context.Context, contactID uuid.UUID) ([]entities.UserContact, error) {
@@ -182,14 +159,20 @@ func (r *contactRepositoryGORM) GetUserContactRelationsByContactID(ctx context.C
 	return userContacts, nil
 }
 
+func (r *contactRepositoryGORM) UpdateUserContactRelation(ctx context.Context, userContact *entities.UserContact) error {
+	gormUserContact := r.userContactEntityToGORM(userContact)
+	if err := r.db.WithContext(ctx).Save(gormUserContact).Error; err != nil {
+		return fmt.Errorf("failed to update user contact relation: %w", err)
+	}
+	// Update the entity with the updated timestamp
+	userContact.UpdatedAt = gormUserContact.UpdatedAt
+	return nil
+}
+
 // entityToGORM converts a domain entity to GORM model
 func (r *contactRepositoryGORM) entityToGORM(contact *entities.Contact) *models.Contact {
 	return &models.Contact{
 		ID:         contact.ID,
-		Name:       contact.Name,
-		Email:      contact.Email,
-		Phone:      contact.Phone,
-		Notes:      contact.Notes,
 		IsUser:     contact.IsUser,
 		UserIDRef:  contact.UserIDRef,
 		CreatedAt:  contact.CreatedAt,
@@ -201,10 +184,6 @@ func (r *contactRepositoryGORM) entityToGORM(contact *entities.Contact) *models.
 func (r *contactRepositoryGORM) gormToEntity(gormContact *models.Contact) *entities.Contact {
 	return &entities.Contact{
 		ID:         gormContact.ID,
-		Name:       gormContact.Name,
-		Email:      gormContact.Email,
-		Phone:      gormContact.Phone,
-		Notes:      gormContact.Notes,
 		IsUser:     gormContact.IsUser,
 		UserIDRef:  gormContact.UserIDRef,
 		CreatedAt:  gormContact.CreatedAt,
@@ -218,6 +197,10 @@ func (r *contactRepositoryGORM) userContactEntityToGORM(userContact *entities.Us
 		ID:        userContact.ID,
 		UserID:    userContact.UserID,
 		ContactID: userContact.ContactID,
+		Name:      userContact.Name,
+		Email:     userContact.Email,
+		Phone:     userContact.Phone,
+		Notes:     userContact.Notes,
 		CreatedAt: userContact.CreatedAt,
 		UpdatedAt: userContact.UpdatedAt,
 	}
@@ -229,6 +212,10 @@ func (r *contactRepositoryGORM) userContactGormToEntity(gormUserContact *models.
 		ID:        gormUserContact.ID,
 		UserID:    gormUserContact.UserID,
 		ContactID: gormUserContact.ContactID,
+		Name:      gormUserContact.Name,
+		Email:     gormUserContact.Email,
+		Phone:     gormUserContact.Phone,
+		Notes:     gormUserContact.Notes,
 		CreatedAt: gormUserContact.CreatedAt,
 		UpdatedAt: gormUserContact.UpdatedAt,
 	}

@@ -164,7 +164,7 @@ func (s *debtService) GetDebtList(ctx context.Context, id uuid.UUID, userID uuid
 	
 	if belongs {
 		// User owns the debt list, get it with relations
-		debtListResponse, err := s.debtListRepo.GetByIDWithRelations(ctx, id)
+		debtListResponse, err := s.debtListRepo.GetByIDWithRelations(ctx, id, userID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get debt list: %w", err)
 		}
@@ -737,9 +737,16 @@ func (s *debtService) GetUpcomingPayments(ctx context.Context, userID uuid.UUID,
 	for _, debtList := range debtLists {
 		if debtList.Status == "active" || debtList.Status == "overdue" {
 			if debtList.NextPaymentDate.After(time.Now()) && debtList.NextPaymentDate.Before(cutoffDate) {
+				// Get contact name from UserContact (user-specific)
+				userContact, err := s.contactRepo.GetUserContactRelation(ctx, userID, debtList.ContactID)
+				contactName := "Unknown"
+				if err == nil && userContact != nil {
+					contactName = userContact.Name
+				}
+				
 				upcomingPayment := entities.UpcomingPayment{
 					DebtListID:      debtList.ID,
-					ContactName:     debtList.Contact.Name,
+					ContactName:     contactName,
 					DebtType:        debtList.DebtType,
 					NextPaymentDate: debtList.NextPaymentDate,
 					Amount:          debtList.InstallmentAmount,

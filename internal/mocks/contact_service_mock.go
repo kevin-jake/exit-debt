@@ -14,36 +14,36 @@ type MockContactService struct {
 	mock.Mock
 }
 
-func (m *MockContactService) CreateContact(ctx context.Context, userID uuid.UUID, req *entities.CreateContactRequest) (*entities.Contact, error) {
+func (m *MockContactService) CreateContact(ctx context.Context, userID uuid.UUID, req *entities.CreateContactRequest) (*entities.ContactResponse, error) {
 	args := m.Called(ctx, userID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*entities.Contact), args.Error(1)
+	return args.Get(0).(*entities.ContactResponse), args.Error(1)
 }
 
-func (m *MockContactService) GetContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.Contact, error) {
+func (m *MockContactService) GetContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.ContactResponse, error) {
 	args := m.Called(ctx, id, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*entities.Contact), args.Error(1)
+	return args.Get(0).(*entities.ContactResponse), args.Error(1)
 }
 
-func (m *MockContactService) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
+func (m *MockContactService) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.ContactResponse, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]entities.Contact), args.Error(1)
+	return args.Get(0).([]entities.ContactResponse), args.Error(1)
 }
 
-func (m *MockContactService) UpdateContact(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateContactRequest) (*entities.Contact, error) {
+func (m *MockContactService) UpdateContact(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *entities.UpdateContactRequest) (*entities.ContactResponse, error) {
 	args := m.Called(ctx, id, userID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*entities.Contact), args.Error(1)
+	return args.Get(0).(*entities.ContactResponse), args.Error(1)
 }
 
 func (m *MockContactService) DeleteContact(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {

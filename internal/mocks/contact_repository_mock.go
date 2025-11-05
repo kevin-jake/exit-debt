@@ -27,28 +27,12 @@ func (m *MockContactRepository) GetByID(ctx context.Context, id uuid.UUID) (*ent
 	return args.Get(0).(*entities.Contact), args.Error(1)
 }
 
-func (m *MockContactRepository) GetByEmail(ctx context.Context, email string) (*entities.Contact, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Contact), args.Error(1)
-}
-
-func (m *MockContactRepository) GetByPhone(ctx context.Context, phone string) (*entities.Contact, error) {
-	args := m.Called(ctx, phone)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entities.Contact), args.Error(1)
-}
-
-func (m *MockContactRepository) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.Contact, error) {
+func (m *MockContactRepository) GetUserContacts(ctx context.Context, userID uuid.UUID) ([]entities.UserContact, error) {
 	args := m.Called(ctx, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]entities.Contact), args.Error(1)
+	return args.Get(0).([]entities.UserContact), args.Error(1)
 }
 
 func (m *MockContactRepository) Update(ctx context.Context, contact *entities.Contact) error {
@@ -66,17 +50,12 @@ func (m *MockContactRepository) ExistsByEmailForUser(ctx context.Context, userID
 	return args.Bool(0), args.Error(1)
 }
 
-func (m *MockContactRepository) ExistsByPhoneForUser(ctx context.Context, userID uuid.UUID, phone string) (bool, error) {
-	args := m.Called(ctx, userID, phone)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *MockContactRepository) GetContactsWithEmail(ctx context.Context, email string) ([]entities.Contact, error) {
+func (m *MockContactRepository) GetUserContactsByEmail(ctx context.Context, email string) ([]entities.UserContact, error) {
 	args := m.Called(ctx, email)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]entities.Contact), args.Error(1)
+	return args.Get(0).([]entities.UserContact), args.Error(1)
 }
 
 func (m *MockContactRepository) CreateUserContactRelation(ctx context.Context, userContact *entities.UserContact) error {
@@ -103,4 +82,9 @@ func (m *MockContactRepository) GetUserContactRelationsByContactID(ctx context.C
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]entities.UserContact), args.Error(1)
+}
+
+func (m *MockContactRepository) UpdateUserContactRelation(ctx context.Context, userContact *entities.UserContact) error {
+	args := m.Called(ctx, userContact)
+	return args.Error(0)
 }

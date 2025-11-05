@@ -16,13 +16,15 @@ import (
 
 // debtListRepositoryGORM implements the DebtListRepository interface using GORM
 type debtListRepositoryGORM struct {
-	db *gorm.DB
+	db          *gorm.DB
+	contactRepo interfaces.ContactRepository
 }
 
 // NewDebtListRepositoryGORM creates a new debt list repository with GORM
-func NewDebtListRepositoryGORM(db *gorm.DB) interfaces.DebtListRepository {
+func NewDebtListRepositoryGORM(db *gorm.DB, contactRepo interfaces.ContactRepository) interfaces.DebtListRepository {
 	return &debtListRepositoryGORM{
-		db: db,
+		db:          db,
+		contactRepo: contactRepo,
 	}
 }
 
@@ -49,7 +51,7 @@ func (r *debtListRepositoryGORM) GetByID(ctx context.Context, id uuid.UUID) (*en
 	return r.gormToEntity(&gormDebtList), nil
 }
 
-func (r *debtListRepositoryGORM) GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*entities.DebtListResponse, error) {
+func (r *debtListRepositoryGORM) GetByIDWithRelations(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtListResponse, error) {
 	var gormDebtList models.DebtList
 	if err := r.db.WithContext(ctx).
 		Preload("Contact").
@@ -62,7 +64,7 @@ func (r *debtListRepositoryGORM) GetByIDWithRelations(ctx context.Context, id uu
 		}
 		return nil, fmt.Errorf("failed to get debt list with relations: %w", err)
 	}
-	return r.gormToResponseEntity(&gormDebtList), nil
+	return r.gormToResponseEntity(ctx, &gormDebtList, userID), nil
 }
 
 func (r *debtListRepositoryGORM) GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error) {
@@ -79,7 +81,7 @@ func (r *debtListRepositoryGORM) GetUserDebtLists(ctx context.Context, userID uu
 
 	debtLists := make([]entities.DebtListResponse, len(gormDebtLists))
 	for i, gormDebtList := range gormDebtLists {
-		debtLists[i] = *r.gormToResponseEntity(&gormDebtList)
+		debtLists[i] = *r.gormToResponseEntity(ctx, &gormDebtList, userID)
 	}
 
 	return debtLists, nil
@@ -103,19 +105,20 @@ func (r *debtListRepositoryGORM) GetDebtListsWhereUserIsContact(ctx context.Cont
 	for i, gormDebtList := range gormDebtLists {
 		// When a user views a debt list where they are the contact,
 		// the Contact field should represent the debt list owner (User), not themselves
-		debtListResponse := *r.gormToResponseEntity(&gormDebtList)
+		debtListResponse := *r.gormToResponseEntity(ctx, &gormDebtList, userID)
 		
-		// Replace the Contact information with the User (debt list owner) information
-		debtListResponse.Contact = entities.Contact{
-			ID:         gormDebtList.User.ID,
-			Name:       gormDebtList.User.FirstName + " " + gormDebtList.User.LastName,
-			Email:      &gormDebtList.User.Email,
-			Phone:      gormDebtList.User.Phone,
-			Notes:      nil, // User doesn't have Notes
-			IsUser:     true,
-			UserIDRef:  &gormDebtList.User.ID,
-			CreatedAt:  gormDebtList.User.CreatedAt,
-			UpdatedAt:  gormDebtList.User.UpdatedAt,
+		// Replace the Contact information with the User (debt list owner) information from their perspective
+		// Build ContactResponse with User data (from the perspective of the contact/userID)
+		debtListResponse.Contact = entities.ContactResponse{
+			ID:        gormDebtList.User.ID,
+			Name:      gormDebtList.User.FirstName + " " + gormDebtList.User.LastName,
+			Email:     &gormDebtList.User.Email,
+			Phone:     gormDebtList.User.Phone,
+			Notes:     nil,
+			IsUser:    true,
+			UserIDRef: &gormDebtList.User.ID,
+			CreatedAt: gormDebtList.User.CreatedAt,
+			UpdatedAt: gormDebtList.User.UpdatedAt,
 		}
 		
 		debtLists[i] = debtListResponse
@@ -286,18 +289,33 @@ func (r *debtListRepositoryGORM) gormToEntity(gormDebtList *models.DebtList) *en
 }
 
 // gormToResponseEntity converts a GORM model to response entity with relations
-func (r *debtListRepositoryGORM) gormToResponseEntity(gormDebtList *models.DebtList) *entities.DebtListResponse {
-	// Convert contact
-	contact := entities.Contact{
-		ID:         gormDebtList.Contact.ID,
-		Name:       gormDebtList.Contact.Name,
-		Email:      gormDebtList.Contact.Email,
-		Phone:      gormDebtList.Contact.Phone,
-		Notes:      gormDebtList.Contact.Notes,
-		IsUser:     gormDebtList.Contact.IsUser,
-		UserIDRef:  gormDebtList.Contact.UserIDRef,
-		CreatedAt:  gormDebtList.Contact.CreatedAt,
-		UpdatedAt:  gormDebtList.Contact.UpdatedAt,
+func (r *debtListRepositoryGORM) gormToResponseEntity(ctx context.Context, gormDebtList *models.DebtList, userID uuid.UUID) *entities.DebtListResponse {
+	// Get user-specific contact information from UserContact
+	var contactResponse entities.ContactResponse
+	userContact, err := r.contactRepo.GetUserContactRelation(ctx, userID, gormDebtList.ContactID)
+	if err == nil && userContact != nil {
+		// User has this contact with custom information
+		contactResponse = entities.ContactResponse{
+			ID:        gormDebtList.Contact.ID,
+			Name:      userContact.Name,
+			Email:     userContact.Email,
+			Phone:     userContact.Phone,
+			Notes:     userContact.Notes,
+			IsUser:    gormDebtList.Contact.IsUser,
+			UserIDRef: gormDebtList.Contact.UserIDRef,
+			CreatedAt: userContact.CreatedAt,
+			UpdatedAt: userContact.UpdatedAt,
+		}
+	} else {
+		// Fallback to basic contact info (shouldn't happen in normal flow)
+		contactResponse = entities.ContactResponse{
+			ID:        gormDebtList.Contact.ID,
+			Name:      "Unknown",
+			IsUser:    gormDebtList.Contact.IsUser,
+			UserIDRef: gormDebtList.Contact.UserIDRef,
+			CreatedAt: gormDebtList.Contact.CreatedAt,
+			UpdatedAt: gormDebtList.Contact.UpdatedAt,
+		}
 	}
 
 	// Convert payments
@@ -336,7 +354,7 @@ func (r *debtListRepositoryGORM) gormToResponseEntity(gormDebtList *models.DebtL
 		Notes:               gormDebtList.Notes,
 		CreatedAt:           gormDebtList.CreatedAt,
 		UpdatedAt:           gormDebtList.UpdatedAt,
-		Contact:             contact,
+		Contact:             contactResponse,
 		Payments:            payments,
 	}
 }

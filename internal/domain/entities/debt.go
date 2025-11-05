@@ -153,26 +153,26 @@ type UpcomingPayment struct {
 
 // DebtListResponse represents a debt list response with related data
 type DebtListResponse struct {
-	ID                  uuid.UUID    `json:"id"`
-	UserID              uuid.UUID    `json:"user_id"`
-	ContactID           uuid.UUID    `json:"contact_id"`
-	DebtType            string       `json:"debt_type"`
+	ID                  uuid.UUID       `json:"id"`
+	UserID              uuid.UUID       `json:"user_id"`
+	ContactID           uuid.UUID       `json:"contact_id"`
+	DebtType            string          `json:"debt_type"`
 	TotalAmount         decimal.Decimal `json:"total_amount"`
 	InstallmentAmount   decimal.Decimal `json:"installment_amount"`
 	TotalPaymentsMade   decimal.Decimal `json:"total_payments_made"`
 	TotalRemainingDebt  decimal.Decimal `json:"total_remaining_debt"`
-	Currency            string       `json:"currency"`
-	Status              string       `json:"status"`
-	DueDate             time.Time    `json:"due_date"`
-	NextPaymentDate     time.Time    `json:"next_payment_date"`
-	InstallmentPlan     string       `json:"installment_plan"`
-	NumberOfPayments    *int         `json:"number_of_payments"`
-	Description         *string      `json:"description"`
-	Notes               *string      `json:"notes"`
-	CreatedAt           time.Time    `json:"created_at"`
-	UpdatedAt           time.Time    `json:"updated_at"`
-	Contact             Contact      `json:"contact,omitempty"`
-	Payments            []DebtItem   `json:"payments,omitempty"`
+	Currency            string          `json:"currency"`
+	Status              string          `json:"status"`
+	DueDate             time.Time       `json:"due_date"`
+	NextPaymentDate     time.Time       `json:"next_payment_date"`
+	InstallmentPlan     string          `json:"installment_plan"`
+	NumberOfPayments    *int            `json:"number_of_payments"`
+	Description         *string         `json:"description"`
+	Notes               *string         `json:"notes"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	Contact             ContactResponse `json:"contact,omitempty"`
+	Payments            []DebtItem      `json:"payments,omitempty"`
 }
 
 // IsValid validates the debt list entity

@@ -16,7 +16,6 @@ import (
 
 func TestContactService_CreateContact(t *testing.T) {
 	userID := uuid.New()
-	contactID := uuid.New()
 	existingUserID := uuid.New()
 
 	tests := []struct {
@@ -26,7 +25,7 @@ func TestContactService_CreateContact(t *testing.T) {
 		setupMocks     func(*mocks.MockContactRepository, *mocks.MockUserRepository)
 		expectedError  error
 		expectSuccess  bool
-		validateResult func(*testing.T, *entities.Contact)
+		validateResult func(*testing.T, *entities.ContactResponse)
 	}{
 		{
 			name:   "create regular contact (non-user)",
@@ -39,16 +38,13 @@ func TestContactService_CreateContact(t *testing.T) {
 			},
 			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
 				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "alice@example.com").Return(false, nil)
-				contactRepo.On("ExistsByPhoneForUser", mock.Anything, userID, "+1987654321").Return(false, nil)
 				userRepo.On("GetByEmail", mock.Anything, "alice@example.com").Return(nil, entities.ErrUserNotFound)
-				contactRepo.On("GetByEmail", mock.Anything, "alice@example.com").Return(nil, entities.ErrContactNotFound)
-				contactRepo.On("GetByPhone", mock.Anything, "+1987654321").Return(nil, entities.ErrContactNotFound)
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
-			validateResult: func(t *testing.T, contact *entities.Contact) {
+			validateResult: func(t *testing.T, contact *entities.ContactResponse) {
 				assert.Equal(t, "Alice Johnson", contact.Name)
 				assert.Equal(t, "alice@example.com", *contact.Email)
 				assert.False(t, contact.IsUser)
@@ -73,7 +69,6 @@ func TestContactService_CreateContact(t *testing.T) {
 					LastName:  "Smith",
 				}
 				userRepo.On("GetByEmail", mock.Anything, "bob@example.com").Return(existingUser, nil)
-				contactRepo.On("GetByEmail", mock.Anything, "bob@example.com").Return(nil, entities.ErrContactNotFound)
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 				
@@ -85,14 +80,13 @@ func TestContactService_CreateContact(t *testing.T) {
 					LastName:  "User",
 				}
 				userRepo.On("GetByID", mock.Anything, userID).Return(contactOwner, nil)
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "user@example.com").Return(false, nil)
-				contactRepo.On("GetByEmail", mock.Anything, "user@example.com").Return(nil, entities.ErrContactNotFound)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, existingUserID, "user@example.com").Return(false, nil)
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
-			validateResult: func(t *testing.T, contact *entities.Contact) {
+			validateResult: func(t *testing.T, contact *entities.ContactResponse) {
 				assert.Equal(t, "Bob Smith", contact.Name)
 				assert.True(t, contact.IsUser)
 				assert.Equal(t, existingUserID, *contact.UserIDRef)
@@ -112,19 +106,6 @@ func TestContactService_CreateContact(t *testing.T) {
 			expectSuccess: false,
 		},
 		{
-			name:   "contact with phone number already exists for user",
-			userID: userID,
-			request: &entities.CreateContactRequest{
-				Name:  "Phone Contact",
-				Phone: stringPtr("+1234567890"),
-			},
-			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
-				contactRepo.On("ExistsByPhoneForUser", mock.Anything, userID, "+1234567890").Return(true, nil)
-			},
-			expectedError: entities.ErrContactPhoneExists,
-			expectSuccess: false,
-		},
-		{
 			name:   "missing contact name",
 			userID: userID,
 			request: &entities.CreateContactRequest{
@@ -136,7 +117,7 @@ func TestContactService_CreateContact(t *testing.T) {
 			expectSuccess: false,
 		},
 		{
-			name:   "reuse existing global contact",
+			name:   "create separate contact with same email",
 			userID: userID,
 			request: &entities.CreateContactRequest{
 				Name:  "Shared Contact",
@@ -145,22 +126,14 @@ func TestContactService_CreateContact(t *testing.T) {
 			setupMocks: func(contactRepo *mocks.MockContactRepository, userRepo *mocks.MockUserRepository) {
 				contactRepo.On("ExistsByEmailForUser", mock.Anything, userID, "shared@example.com").Return(false, nil)
 				userRepo.On("GetByEmail", mock.Anything, "shared@example.com").Return(nil, entities.ErrUserNotFound)
-				existingContact := &entities.Contact{
-					ID:        contactID,
-					Name:      "Shared Contact",
-					Email:     stringPtr("shared@example.com"),
-					IsUser:    false,
-					CreatedAt: time.Now(),
-					UpdatedAt: time.Now(),
-				}
-				contactRepo.On("GetByEmail", mock.Anything, "shared@example.com").Return(existingContact, nil)
+				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
 				contactRepo.On("CreateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
-			validateResult: func(t *testing.T, contact *entities.Contact) {
-				assert.Equal(t, contactID, contact.ID)
+			validateResult: func(t *testing.T, contact *entities.ContactResponse) {
 				assert.Equal(t, "Shared Contact", contact.Name)
+				assert.Equal(t, "shared@example.com", *contact.Email)
 			},
 		},
 	}
@@ -221,11 +194,13 @@ func TestContactService_GetContact(t *testing.T) {
 					ID:        uuid.New(),
 					UserID:    userID,
 					ContactID: contactID,
+					Name:      "Test Contact",
+					Email:     stringPtr("test@example.com"),
 				}
 				contactRepo.On("GetUserContactRelation", mock.Anything, userID, contactID).Return(userContact, nil)
 				contact := &entities.Contact{
-					ID:   contactID,
-					Name: "Test Contact",
+					ID:     contactID,
+					IsUser: false,
 				}
 				contactRepo.On("GetByID", mock.Anything, contactID).Return(contact, nil)
 			},
@@ -302,18 +277,18 @@ func TestContactService_UpdateContact(t *testing.T) {
 					ID:        uuid.New(),
 					UserID:    userID,
 					ContactID: contactID,
+					Name:      "Original Name",
+					Phone:     stringPtr("+1234567890"),
 				}
 				contactRepo.On("GetUserContactRelation", mock.Anything, userID, contactID).Return(userContact, nil)
 				contact := &entities.Contact{
 					ID:        contactID,
-					Name:      "Original Name",
-					Phone:     stringPtr("+1234567890"),
 					IsUser:    false,
 					CreatedAt: time.Now(),
 					UpdatedAt: time.Now(),
 				}
 				contactRepo.On("GetByID", mock.Anything, contactID).Return(contact, nil)
-				contactRepo.On("Update", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
+				contactRepo.On("UpdateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
@@ -330,11 +305,12 @@ func TestContactService_UpdateContact(t *testing.T) {
 					ID:        uuid.New(),
 					UserID:    userID,
 					ContactID: contactID,
+					Name:      "Contact Name",
+					Email:     stringPtr("old@example.com"),
 				}
 				contactRepo.On("GetUserContactRelation", mock.Anything, userID, contactID).Return(userContact, nil)
 				contact := &entities.Contact{
 					ID:        contactID,
-					Name:      "Contact Name",
 					IsUser:    false,
 					UserIDRef: nil,
 					CreatedAt: time.Now(),
@@ -349,6 +325,7 @@ func TestContactService_UpdateContact(t *testing.T) {
 				}
 				userRepo.On("GetByEmail", mock.Anything, "existing.user@example.com").Return(existingUser, nil)
 				contactRepo.On("Update", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
+				contactRepo.On("UpdateUserContactRelation", mock.Anything, mock.AnythingOfType("*entities.UserContact")).Return(nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
@@ -432,11 +409,8 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 				}
 				userRepo.On("GetByID", mock.Anything, userAID).Return(userA, nil)
 				
-				// Check if reciprocal contact already exists
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, userAID, "usera@example.com").Return(false, nil)
-				
-				// No existing contact with User A's email
-				contactRepo.On("GetByEmail", mock.Anything, "usera@example.com").Return(nil, entities.ErrContactNotFound)
+				// Check if reciprocal contact already exists (checking User B's contacts for User A's email)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, userBID, "usera@example.com").Return(false, nil)
 				
 				// Create contact and relation
 				contactRepo.On("Create", mock.Anything, mock.AnythingOfType("*entities.Contact")).Return(nil)
@@ -468,8 +442,8 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 				}
 				userRepo.On("GetByID", mock.Anything, userAID).Return(userA, nil)
 				
-				// Reciprocal contact already exists
-				contactRepo.On("ExistsByEmailForUser", mock.Anything, userAID, "usera@example.com").Return(true, nil)
+				// Reciprocal contact already exists (checking User B's contacts for User A's email)
+				contactRepo.On("ExistsByEmailForUser", mock.Anything, userBID, "usera@example.com").Return(true, nil)
 			},
 			expectedError: nil,
 			expectSuccess: true,
@@ -514,4 +488,3 @@ func TestContactService_CreateReciprocalContact(t *testing.T) {
 		})
 	}
 }
-

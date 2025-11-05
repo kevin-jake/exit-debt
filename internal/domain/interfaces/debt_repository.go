@@ -14,7 +14,7 @@ import (
 type DebtListRepository interface {
 	Create(ctx context.Context, debtList *entities.DebtList) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.DebtList, error)
-	GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*entities.DebtListResponse, error)
+	GetByIDWithRelations(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtListResponse, error)
 	GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error)
 	GetDebtListsWhereUserIsContact(ctx context.Context, userID uuid.UUID) ([]entities.DebtListResponse, error)
 	Update(ctx context.Context, debtList *entities.DebtList) error
