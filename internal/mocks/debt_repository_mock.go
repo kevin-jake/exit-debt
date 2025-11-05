@@ -29,8 +29,8 @@ func (m *MockDebtListRepository) GetByID(ctx context.Context, id uuid.UUID) (*en
 	return args.Get(0).(*entities.DebtList), args.Error(1)
 }
 
-func (m *MockDebtListRepository) GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*entities.DebtListResponse, error) {
-	args := m.Called(ctx, id)
+func (m *MockDebtListRepository) GetByIDWithRelations(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtListResponse, error) {
+	args := m.Called(ctx, id, userID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
