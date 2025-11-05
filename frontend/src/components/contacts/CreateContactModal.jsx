@@ -5,6 +5,7 @@ import { useNotificationsStore } from '@stores/notificationsStore'
 
 export const CreateContactModal = ({ onContactCreated, onClose }) => {
   const [isLoading, setIsLoading] = useState(false)
+  const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
   const createContact = useContactsStore((state) => state.createContact)
   const showSuccess = useNotificationsStore((state) => state.success)
   const showError = useNotificationsStore((state) => state.error)
@@ -55,10 +56,27 @@ export const CreateContactModal = ({ onContactCreated, onClose }) => {
     }
   }
 
+  const handleOverlayMouseDown = (e) => {
+    // Track if mousedown happened on the overlay
+    if (e.target === e.currentTarget && !isLoading) {
+      setMouseDownOnOverlay(true)
+    }
+  }
+
+  const handleOverlayClick = (e) => {
+    // Only close if both mousedown and click happened on the overlay
+    if (e.target === e.currentTarget && !isLoading && mouseDownOnOverlay) {
+      onClose()
+    }
+    // Reset the flag
+    setMouseDownOnOverlay(false)
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
-      onClick={onClose}
+      onMouseDown={handleOverlayMouseDown}
+      onClick={handleOverlayClick}
     >
       <div
         className="my-8 w-full max-w-md overflow-hidden rounded-xl bg-card shadow-medium"

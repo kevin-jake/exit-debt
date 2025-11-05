@@ -94,8 +94,8 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
                   This contact cannot be deleted because there are{' '}
                   <span className="font-medium">{associatedDebts.length}</span> debt list
                   {associatedDebts.length === 1 ? '' : 's'} associated with{' '}
-                  <span className="font-medium">"{contact.name}"</span>. Please delete or reassign
-                  the following debt list{associatedDebts.length === 1 ? '' : 's'} first:
+                  <span className="font-medium">"{contact.name}"</span>. Please delete the following
+                  debt list{associatedDebts.length === 1 ? '' : 's'} first:
                 </>
               ) : (
                 <>

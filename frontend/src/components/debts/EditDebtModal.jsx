@@ -9,6 +9,7 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
   const { contacts, fetchContacts } = useContactsStore()
   const { success, error } = useNotificationsStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
 
   const {
     register,
@@ -16,7 +17,6 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      contact_id: debt.contact_id || '',
       debt_type: debt.debt_type || 'i_owe',
       total_amount: debt.total_amount || '',
       description: debt.description || '',
@@ -24,10 +24,6 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
       notes: debt.notes || '',
     },
   })
-
-  useEffect(() => {
-    fetchContacts()
-  }, [])
 
   const onSubmit = async (data) => {
     setIsSubmitting(true)
@@ -55,15 +51,26 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
     }
   }
 
-  const handleOverlayClick = (e) => {
+  const handleOverlayMouseDown = (e) => {
+    // Track if mousedown happened on the overlay
     if (e.target === e.currentTarget && !isSubmitting) {
+      setMouseDownOnOverlay(true)
+    }
+  }
+
+  const handleOverlayClick = (e) => {
+    // Only close if both mousedown and click happened on the overlay
+    if (e.target === e.currentTarget && !isSubmitting && mouseDownOnOverlay) {
       onClose()
     }
+    // Reset the flag
+    setMouseDownOnOverlay(false)
   }
 
   return (
     <div
       className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
+      onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
       <div className="card my-8 w-full max-w-lg overflow-hidden">
@@ -105,32 +112,6 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
               </select>
               {errors.debt_type && (
                 <p className="mt-1 text-sm text-destructive">{errors.debt_type.message}</p>
-              )}
-            </div>
-
-            {/* Contact */}
-            <div>
-              <label
-                htmlFor="contact_id"
-                className="mb-2 block text-sm font-medium text-foreground"
-              >
-                Contact <span className="text-destructive">*</span>
-              </label>
-              <select
-                id="contact_id"
-                {...register('contact_id', { required: 'Contact is required' })}
-                className="input"
-                disabled={isSubmitting}
-              >
-                <option value="">Select a contact</option>
-                {contacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contact.name}
-                  </option>
-                ))}
-              </select>
-              {errors.contact_id && (
-                <p className="mt-1 text-sm text-destructive">{errors.contact_id.message}</p>
               )}
             </div>
 

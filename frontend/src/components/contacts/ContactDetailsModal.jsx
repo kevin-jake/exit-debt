@@ -67,9 +67,6 @@ export const ContactDetailsModal = ({ contact, onClose, onEdit, onDelete }) => {
             </div>
             <div>
               <h3 className="text-2xl font-bold text-foreground">{contact.name}</h3>
-              <span className="inline-flex rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                Regular Contact
-              </span>
             </div>
           </div>
 
