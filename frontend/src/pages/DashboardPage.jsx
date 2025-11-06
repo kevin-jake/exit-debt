@@ -7,6 +7,8 @@ import { StatCard } from '@components/common/StatCard'
 import { EmptyState } from '@components/common/EmptyState'
 import { CreateDebtModal } from '@components/debts/CreateDebtModal'
 import { CreateContactModal } from '@components/contacts/CreateContactModal'
+import { DebtDetailsModal } from '@components/debts/DebtDetailsModal'
+import { EditDebtModal } from '@components/debts/EditDebtModal'
 import {
   formatCurrency,
   formatRelativeTime,
@@ -23,6 +25,8 @@ export const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [showCreateDebtModal, setShowCreateDebtModal] = useState(false)
   const [showCreateContactModal, setShowCreateContactModal] = useState(false)
+  const [selectedDebt, setSelectedDebt] = useState(null)
+  const [editingDebt, setEditingDebt] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -268,7 +272,7 @@ export const DashboardPage = () => {
               <div
                 key={debt.id}
                 className="cursor-pointer rounded-lg border border-border p-4 transition-shadow hover:shadow-md"
-                onClick={() => navigate(ROUTES.DEBTS)}
+                onClick={() => setSelectedDebt(debt)}
               >
                 <div className="mb-3 flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -364,6 +368,42 @@ export const DashboardPage = () => {
         <CreateContactModal
           onContactCreated={handleContactCreated}
           onClose={() => setShowCreateContactModal(false)}
+        />
+      )}
+
+      {/* Debt Details Modal */}
+      {selectedDebt && !editingDebt && (
+        <DebtDetailsModal
+          debt={selectedDebt}
+          onClose={() => setSelectedDebt(null)}
+          onEdit={() => {
+            setEditingDebt(selectedDebt)
+            setSelectedDebt(null)
+          }}
+          onDelete={async () => {
+            if (window.confirm('Are you sure you want to delete this debt?')) {
+              try {
+                await useDebtsStore.getState().deleteDebt(selectedDebt.id)
+                setSelectedDebt(null)
+                await fetchDebts()
+              } catch (error) {
+                console.error('Failed to delete debt:', error)
+                alert('Failed to delete debt. Please try again.')
+              }
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Debt Modal */}
+      {editingDebt && (
+        <EditDebtModal
+          debt={editingDebt}
+          onClose={() => setEditingDebt(null)}
+          onDebtUpdated={async () => {
+            setEditingDebt(null)
+            await fetchDebts()
+          }}
         />
       )}
     </div>
