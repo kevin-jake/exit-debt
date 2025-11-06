@@ -465,7 +465,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
 
           {/* Action Buttons */}
           <div className="mt-6 flex space-x-3">
-            <button onClick={onEdit} className="btn-secondary flex-1">
+            <button onClick={onEdit} className="btn-primary flex-1">
               <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"

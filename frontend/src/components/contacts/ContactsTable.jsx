@@ -356,7 +356,7 @@ export const ContactsTable = () => {
                           </button>
                           <button
                             onClick={() => editContact(contact)}
-                            className="p-1 text-secondary hover:text-secondary/80"
+                            className="p-1 text-primary hover:text-primary/80"
                             title="Edit"
                           >
                             <svg
