@@ -15,13 +15,10 @@ const NavIcon = ({ icon }) => {
   const icons = {
     dashboard: (
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2v0"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7l9 6 9-6" />
+        <rect x="3" y="3" width="7" height="7" rx="2" strokeWidth="2" stroke="currentColor" />
+        <rect x="14" y="3" width="7" height="7" rx="2" strokeWidth="2" stroke="currentColor" />
+        <rect x="14" y="14" width="7" height="7" rx="2" strokeWidth="2" stroke="currentColor" />
+        <rect x="3" y="14" width="7" height="7" rx="2" strokeWidth="2" stroke="currentColor" />
       </svg>
     ),
     money: (
@@ -40,7 +37,7 @@ const NavIcon = ({ icon }) => {
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
-          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+          d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
         />
       </svg>
     ),
