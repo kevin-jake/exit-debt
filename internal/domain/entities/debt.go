@@ -123,10 +123,12 @@ type DebtItemVerificationResponse struct {
 
 // PaymentScheduleItem represents a scheduled payment
 type PaymentScheduleItem struct {
-	PaymentNumber int             `json:"payment_number"`
-	DueDate       time.Time       `json:"due_date"`
-	Amount        decimal.Decimal `json:"amount"`
-	Status        string          `json:"status"` // pending, paid, overdue, missed
+	PaymentNumber    int             `json:"payment_number"`
+	DueDate          time.Time       `json:"due_date"`
+	Amount           decimal.Decimal `json:"amount"`            // Remaining amount to be paid
+	ScheduledAmount  decimal.Decimal `json:"scheduled_amount"`  // Original scheduled amount for this payment
+	PaidAmount       decimal.Decimal `json:"paid_amount"`       // Amount already paid
+	Status           string          `json:"status"`            // pending, paid, overdue, missed
 }
 
 // PaymentSummary represents a summary of payments for a debt list

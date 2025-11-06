@@ -46,15 +46,11 @@ func (s *paymentScheduleService) CalculateNextPaymentDate(debtList *entities.Deb
 		return debtList.DueDate // Default to onetime
 	}
 }
-
 func (s *paymentScheduleService) CalculatePaymentSchedule(debtList *entities.DebtList, payments []entities.DebtItem) []entities.PaymentScheduleItem {
 	var schedule []entities.PaymentScheduleItem
 	currentDate := debtList.CreatedAt
 	paymentNumber := 1
 
-	// Calculate total number of payments based on time period
-	totalPayments := s.CalculateNumberOfPayments(debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
-	
 	// Calculate total payments made
 	totalPaymentsMade := decimal.Zero
 	for _, payment := range payments {
@@ -63,36 +59,37 @@ func (s *paymentScheduleService) CalculatePaymentSchedule(debtList *entities.Deb
 		}
 	}
 
-	// Calculate remaining debt after payments
-	remainingAfterPayments := debtList.TotalAmount.Sub(totalPaymentsMade)
-	if remainingAfterPayments.LessThan(decimal.Zero) {
-		remainingAfterPayments = decimal.Zero
-	}
-
 	// Use the original installment amount from the debt list
 	originalInstallmentAmount := debtList.InstallmentAmount
 
-	// Track how much has been paid against each installment
+	// Variable 1: Track how much of the USER'S PAYMENTS remains to be allocated to installments
+	// This is used to determine which installments should be marked as "paid" or "partially paid"
 	remainingPaymentAmount := totalPaymentsMade
 
-	for paymentNumber <= totalPayments && remainingAfterPayments.GreaterThan(decimal.Zero) {
-		// Use the original installment amount
+	// Variable 2: Track how much of the TOTAL DEBT remains to be scheduled as installments
+	// This starts at the full debt amount and decrements by each installment amount scheduled
+	remainingDebtToSchedule := debtList.TotalAmount
+
+	// Continue generating payment schedule items until all debt is accounted for
+	for remainingDebtToSchedule.GreaterThan(decimal.Zero) {
+		// Use the original installment amount, but cap it at remaining debt
 		paymentAmount := originalInstallmentAmount
-		if remainingAfterPayments.LessThan(paymentAmount) {
-			paymentAmount = remainingAfterPayments
+		if remainingDebtToSchedule.LessThan(paymentAmount) {
+			paymentAmount = remainingDebtToSchedule
 		}
 
 		// Determine if this installment is already paid
 		status := "pending"
 		amountNeeded := paymentAmount
+		paidAmount := decimal.Zero
 
 		if remainingPaymentAmount.GreaterThanOrEqual(paymentAmount) {
-			// This installment is fully paid
 			status = "paid"
+			paidAmount = paymentAmount
 			amountNeeded = decimal.Zero
 			remainingPaymentAmount = remainingPaymentAmount.Sub(paymentAmount)
 		} else if remainingPaymentAmount.GreaterThan(decimal.Zero) {
-			// This installment is partially paid
+			paidAmount = remainingPaymentAmount
 			amountNeeded = paymentAmount.Sub(remainingPaymentAmount)
 			remainingPaymentAmount = decimal.Zero
 		}
@@ -101,16 +98,18 @@ func (s *paymentScheduleService) CalculatePaymentSchedule(debtList *entities.Deb
 		nextDate := s.CalculateNextPaymentDate(debtList, &currentDate)
 
 		scheduleItem := entities.PaymentScheduleItem{
-			PaymentNumber: paymentNumber,
-			DueDate:       nextDate,
-			Amount:        amountNeeded,
-			Status:        status,
+			PaymentNumber:   paymentNumber,
+			DueDate:         nextDate,
+			Amount:          amountNeeded,
+			ScheduledAmount: paymentAmount,
+			PaidAmount:      paidAmount,
+			Status:          status,
 		}
 
 		schedule = append(schedule, scheduleItem)
 
 		// Update for next iteration
-		remainingAfterPayments = remainingAfterPayments.Sub(paymentAmount)
+		remainingDebtToSchedule = remainingDebtToSchedule.Sub(paymentAmount)
 		currentDate = nextDate
 		paymentNumber++
 	}
