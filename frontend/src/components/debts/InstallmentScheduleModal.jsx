@@ -53,8 +53,10 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
     }
   }
 
-  const displaySchedule = schedule.slice(0, 12)
-  const hasMore = schedule.length > 12
+  // Limit display based on debt.number_of_payments or show all if not specified
+  const maxPayments = debt.number_of_payments || schedule.length
+  const displaySchedule = schedule.slice(0, Math.min(12, maxPayments))
+  const hasMore = maxPayments > 12
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -156,29 +158,20 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                   <tbody className="divide-y divide-border">
                     {displaySchedule.map((item, index) => {
                       // Calculate remaining balance after this payment
-                      // This shows what would remain after this payment is completed
                       const totalAmount = parseFloat(debt.total_amount || 0)
 
-                      // Sum all amounts up to and including this payment
-                      const totalPaidSoFar = payments.reduce(
-                        (sum, payment) => sum + parseFloat(payment.amount || 0),
-                        0
+                      // Get the current payment index in the full schedule
+                      const currentPaymentIndex = schedule.findIndex(
+                        (s) => s.payment_number === item.payment_number
                       )
 
-                      // Calculate cumulative scheduled amount up to this point
+                      // Calculate cumulative scheduled amount up to and including this payment
                       const cumulativeScheduled = schedule
-                        .slice(
-                          0,
-                          schedule.findIndex((s) => s.payment_number === item.payment_number) + 1
-                        )
+                        .slice(0, currentPaymentIndex + 1)
                         .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
 
-                      // Remaining = Total - (what's been paid + what's scheduled to be paid in this payment)
-                      // But we show it as if this payment completes
-                      const remainingAfter = Math.max(
-                        0,
-                        totalAmount - totalPaidSoFar - parseFloat(item.amount || 0)
-                      )
+                      // Remaining = Total - Cumulative Scheduled Amount
+                      const remainingAfter = Math.max(0, totalAmount - cumulativeScheduled)
 
                       return (
                         <tr
@@ -200,23 +193,7 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                             {formatCurrency(parseFloat(item.amount || 0))}
                           </td>
                           <td className="py-3 text-right text-sm text-muted-foreground">
-                            {item.status === 'paid'
-                              ? formatCurrency(
-                                  Math.max(
-                                    0,
-                                    totalAmount -
-                                      schedule
-                                        .slice(
-                                          0,
-                                          schedule.findIndex(
-                                            (s) => s.payment_number === item.payment_number
-                                          ) + 1
-                                        )
-                                        .filter((s) => s.status === 'paid')
-                                        .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
-                                  )
-                                )
-                              : formatCurrency(remainingAfter)}
+                            {formatCurrency(remainingAfter)}
                           </td>
                         </tr>
                       )
@@ -228,7 +205,7 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
               {hasMore && (
                 <div className="mt-4 rounded-lg border border-border bg-muted/30 p-4 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Showing first 12 of {schedule.length} scheduled payments
+                    Showing first 12 of {maxPayments} scheduled payments
                   </p>
                 </div>
               )}
@@ -237,7 +214,9 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
               <div className="mt-6 grid grid-cols-1 gap-4 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-3">
                 <div className="text-center">
                   <div className="text-sm text-muted-foreground">Total Payments</div>
-                  <div className="mt-1 text-lg font-bold text-foreground">{schedule.length}</div>
+                  <div className="mt-1 text-lg font-bold text-foreground">
+                    {debt.number_of_payments || schedule.length}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-sm text-muted-foreground">Completed</div>
@@ -248,7 +227,8 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                 <div className="text-center">
                   <div className="text-sm text-muted-foreground">Remaining</div>
                   <div className="mt-1 text-lg font-bold text-primary">
-                    {schedule.filter((s) => s.status !== 'paid').length}
+                    {(debt.number_of_payments || schedule.length) -
+                      schedule.filter((s) => s.status === 'paid').length}
                   </div>
                 </div>
               </div>

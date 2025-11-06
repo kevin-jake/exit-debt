@@ -166,21 +166,19 @@ export const DashboardPage = () => {
               {overdueDebts.map((debt) => (
                 <div
                   key={debt.id}
-                  className="flex cursor-pointer items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-3 transition-colors hover:bg-destructive/10"
+                  className="flex cursor-pointer items-center justify-between rounded-lg border p-3"
                   onClick={() => setSelectedDebt(debt)}
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/20">
-                      <span className="text-sm font-medium text-destructive">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                      <span className="text-sm font-medium">
                         {getInitials(debt.contact?.name || 'Unknown')}
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-foreground">
-                        {debt.contact?.name || 'Unknown Contact'}
-                      </h4>
+                      <h4 className="font-medium">{debt.contact?.name || 'Unknown Contact'}</h4>
                       <p className="text-sm text-muted-foreground">
-                        {debt.description || 'No description'}
+                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
                       </p>
                     </div>
                   </div>
@@ -224,7 +222,7 @@ export const DashboardPage = () => {
                         {debt.contact?.name || 'Unknown Contact'}
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {debt.description || 'No description'}
+                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
                       </p>
                     </div>
                   </div>
@@ -368,7 +366,7 @@ export const DashboardPage = () => {
                         {debt.contact?.name || 'Unknown Contact'}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {debt.description || 'No description'}
+                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
                       </p>
                     </div>
                   </div>

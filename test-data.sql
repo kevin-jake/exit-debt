@@ -377,7 +377,7 @@ BEGIN
         description, notes, created_at, updated_at
     ) VALUES (
         v_debt_id, v_user_id, v_contact_id, 'owed_to_me',
-        1000.00, 1000.00, 0.00, 1000.00, 'Php', 'archived',
+        1000.00, 1000.00, 0.00, 1000.00, 'Php', 'settled',
         v_due_date, v_next_payment_date,
         'onetime', 1,
         'Test ONETIME - ARCHIVED (old debt)',

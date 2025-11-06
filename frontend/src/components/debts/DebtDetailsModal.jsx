@@ -296,6 +296,45 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
               )}
             </div>
 
+            {/* Payment Frequency */}
+            {debt.installment_plan && (
+              <div className="rounded-lg border border-border p-4">
+                <div className="mb-2 text-sm font-medium text-muted-foreground">Payment Plan</div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-semibold capitalize text-foreground">
+                      {debt.installment_plan === 'onetime'
+                        ? 'One-time Payment'
+                        : debt.installment_plan === 'biweekly'
+                          ? 'Bi-weekly Installments'
+                          : `${debt.installment_plan} Installments`}
+                    </div>
+                    {debt.installment_plan !== 'onetime' && debt.number_of_payments && (
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {debt.number_of_payments} payment{debt.number_of_payments !== 1 ? 's' : ''}{' '}
+                        total
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <svg
+                      className="h-6 w-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Next Payment Date */}
             {debt.installment_plan &&
               debt.installment_plan !== 'onetime' &&
@@ -340,21 +379,11 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                           {formatCurrency(parseFloat(nextPaymentInfo.amount || 0))}
                         </div>
                       </div>
-                      {nextPaymentInfo.payment_number && (
+                      {nextPaymentInfo.payment_number && debt.number_of_payments && (
                         <div className="flex items-center justify-between border-t border-border pt-3">
-                          <div className="text-sm text-muted-foreground">Payment Number</div>
+                          <div className="text-sm text-muted-foreground">Payment Progress</div>
                           <div className="text-sm font-medium text-foreground">
-                            #{nextPaymentInfo.payment_number}
-                          </div>
-                        </div>
-                      )}
-                      {debt.installment_plan && (
-                        <div className="flex items-center justify-between border-t border-border pt-3">
-                          <div className="text-sm text-muted-foreground">Payment Frequency</div>
-                          <div className="text-sm font-medium capitalize text-foreground">
-                            {debt.installment_plan === 'biweekly'
-                              ? 'Bi-weekly'
-                              : debt.installment_plan}
+                            #{nextPaymentInfo.payment_number} of {debt.number_of_payments}
                           </div>
                         </div>
                       )}
