@@ -128,20 +128,20 @@ func (s *paymentScheduleService) CalculateDueDateFromNumberOfPayments(createdAt 
 		// For 1-time payments, due date is the creation date (single payment)
 		dueDate = createdAt
 	case "weekly":
-		// Each payment is 7 days apart
-		dueDate = createdAt.AddDate(0, 0, (numberOfPayments-1)*7)
+		// Each payment is 7 days apart, final payment is N weeks from creation
+		dueDate = createdAt.AddDate(0, 0, numberOfPayments*7)
 	case "biweekly":
-		// Each payment is 14 days apart
-		dueDate = createdAt.AddDate(0, 0, (numberOfPayments-1)*14)
+		// Each payment is 14 days apart, final payment is N biweekly periods from creation
+		dueDate = createdAt.AddDate(0, 0, numberOfPayments*14)
 	case "monthly":
-		// Each payment is 1 month apart
-		dueDate = createdAt.AddDate(0, numberOfPayments-1, 0)
+		// Each payment is 1 month apart, final payment is N months from creation
+		dueDate = createdAt.AddDate(0, numberOfPayments, 0)
 	case "quarterly":
-		// Each payment is 3 months apart
-		dueDate = createdAt.AddDate(0, (numberOfPayments-1)*3, 0)
+		// Each payment is 3 months apart, final payment is N quarters from creation
+		dueDate = createdAt.AddDate(0, numberOfPayments*3, 0)
 	case "yearly":
-		// Each payment is 1 year apart
-		dueDate = createdAt.AddDate(numberOfPayments-1, 0, 0)
+		// Each payment is 1 year apart, final payment is N years from creation
+		dueDate = createdAt.AddDate(numberOfPayments, 0, 0)
 	default:
 		// Default to onetime (single payment)
 		dueDate = createdAt
