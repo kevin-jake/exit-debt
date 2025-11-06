@@ -12,7 +12,7 @@ export const ContactsPage = () => {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-center justify-between md:flex-row">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Contact Management</h1>
           <p className="mt-1 text-muted-foreground">
@@ -45,4 +45,3 @@ export const ContactsPage = () => {
     </div>
   )
 }
-

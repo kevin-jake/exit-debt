@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDebtsStore } from '@stores/debtsStore'
 import { formatCurrency, formatDate } from '@utils/formatters'
 
@@ -6,7 +6,9 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
   const [schedule, setSchedule] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [displayCount, setDisplayCount] = useState(12)
   const fetchPaymentSchedule = useDebtsStore((state) => state.fetchPaymentSchedule)
+  const observerTarget = useRef(null)
 
   useEffect(() => {
     const loadSchedule = async () => {
@@ -45,6 +47,31 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
     loadSchedule()
   }, [debt?.id, fetchPaymentSchedule])
 
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          const maxPayments = debt?.number_of_payments || schedule.length
+          if (displayCount < maxPayments) {
+            setDisplayCount((prev) => Math.min(prev + 12, maxPayments))
+          }
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current)
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current)
+      }
+    }
+  }, [displayCount, schedule.length, debt?.number_of_payments])
+
   if (!debt) return null
 
   const handleOverlayClick = (e) => {
@@ -53,10 +80,9 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
     }
   }
 
-  // Limit display based on debt.number_of_payments or show all if not specified
+  // Display schedule based on current displayCount
   const maxPayments = debt.number_of_payments || schedule.length
-  const displaySchedule = schedule.slice(0, Math.min(12, maxPayments))
-  const hasMore = maxPayments > 12
+  const displaySchedule = schedule.slice(0, Math.min(displayCount, maxPayments))
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -116,6 +142,28 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
         </div>
 
         <div className="p-6">
+          {/* Summary */}
+          <div className="my-6 grid grid-cols-1 gap-4 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-3">
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground">Total Payments</div>
+              <div className="mt-1 text-lg font-bold text-foreground">
+                {debt.number_of_payments || schedule.length}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground">Completed</div>
+              <div className="mt-1 text-lg font-bold text-success">
+                {schedule.filter((s) => s.status === 'paid').length}
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-muted-foreground">Remaining</div>
+              <div className="mt-1 text-lg font-bold text-primary">
+                {(debt.number_of_payments || schedule.length) -
+                  schedule.filter((s) => s.status === 'paid').length}
+              </div>
+            </div>
+          </div>
           {isLoading ? (
             <div className="py-8 text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
@@ -134,7 +182,95 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Mobile Card View */}
+              <div className="space-y-4 md:hidden">
+                {displaySchedule.map((item, index) => {
+                  // Calculate remaining balance after this payment
+                  const totalAmount = parseFloat(debt.total_amount || 0)
+
+                  // Get the current payment index in the full schedule
+                  const currentPaymentIndex = schedule.findIndex(
+                    (s) => s.payment_number === item.payment_number
+                  )
+
+                  // Calculate cumulative scheduled amount up to and including this payment
+                  const cumulativeScheduled = schedule
+                    .slice(0, currentPaymentIndex + 1)
+                    .reduce((sum, s) => sum + parseFloat(s.scheduled_amount || 0), 0)
+
+                  // Remaining = Total - Cumulative Scheduled Amount
+                  const remainingAfter = Math.max(0, totalAmount - cumulativeScheduled)
+
+                  const scheduledAmount = parseFloat(item.scheduled_amount || 0)
+                  const paidAmount = parseFloat(item.paid_amount || 0)
+                  const stillOwed = parseFloat(item.amount || 0)
+
+                  return (
+                    <div
+                      key={item.payment_number}
+                      className={`rounded-lg border border-border p-4 ${
+                        item.status === 'overdue' || item.status === 'missed' ? 'bg-muted/30' : ''
+                      }`}
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-semibold text-foreground">
+                            #{item.payment_number}
+                          </span>
+                          {getStatusBadge(item.status)}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {formatDate(item.due_date)}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Scheduled</span>
+                          <span className="text-sm font-medium text-foreground">
+                            {formatCurrency(scheduledAmount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Paid</span>
+                          <span
+                            className={`text-sm font-medium ${
+                              paidAmount > 0
+                                ? paidAmount >= scheduledAmount
+                                  ? 'text-success'
+                                  : 'text-warning'
+                                : 'text-muted-foreground'
+                            }`}
+                          >
+                            {formatCurrency(paidAmount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Still Owed</span>
+                          <span className="text-sm font-medium">
+                            {stillOwed > 0 ? (
+                              <span className="text-warning">{formatCurrency(stillOwed)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">{formatCurrency(0)}</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-border pt-2">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            Balance After
+                          </span>
+                          <span className="text-sm font-medium text-foreground">
+                            {formatCurrency(remainingAfter)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full">
                   <thead className="border-b border-border">
                     <tr>
@@ -148,10 +284,16 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                         Status
                       </th>
                       <th className="pb-3 text-right text-sm font-medium text-muted-foreground">
-                        Amount
+                        Scheduled
                       </th>
                       <th className="pb-3 text-right text-sm font-medium text-muted-foreground">
-                        Remaining After
+                        Paid
+                      </th>
+                      <th className="pb-3 text-right text-sm font-medium text-muted-foreground">
+                        Still Owed
+                      </th>
+                      <th className="pb-3 text-right text-sm font-medium text-muted-foreground">
+                        Balance After
                       </th>
                     </tr>
                   </thead>
@@ -168,10 +310,14 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                       // Calculate cumulative scheduled amount up to and including this payment
                       const cumulativeScheduled = schedule
                         .slice(0, currentPaymentIndex + 1)
-                        .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+                        .reduce((sum, s) => sum + parseFloat(s.scheduled_amount || 0), 0)
 
                       // Remaining = Total - Cumulative Scheduled Amount
                       const remainingAfter = Math.max(0, totalAmount - cumulativeScheduled)
+
+                      const scheduledAmount = parseFloat(item.scheduled_amount || 0)
+                      const paidAmount = parseFloat(item.paid_amount || 0)
+                      const stillOwed = parseFloat(item.amount || 0)
 
                       return (
                         <tr
@@ -190,7 +336,27 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                           </td>
                           <td className="py-3 text-sm">{getStatusBadge(item.status)}</td>
                           <td className="py-3 text-right text-sm font-medium text-foreground">
-                            {formatCurrency(parseFloat(item.amount || 0))}
+                            {formatCurrency(scheduledAmount)}
+                          </td>
+                          <td className="py-3 text-right text-sm font-medium text-foreground">
+                            <span
+                              className={`${
+                                paidAmount > 0
+                                  ? paidAmount >= scheduledAmount
+                                    ? 'text-success'
+                                    : 'text-warning'
+                                  : 'text-muted-foreground'
+                              }`}
+                            >
+                              {formatCurrency(paidAmount)}
+                            </span>
+                          </td>
+                          <td className="py-3 text-right text-sm font-medium text-foreground">
+                            {stillOwed > 0 ? (
+                              <span className="text-warning">{formatCurrency(stillOwed)}</span>
+                            ) : (
+                              <span className="text-muted-foreground">{formatCurrency(0)}</span>
+                            )}
                           </td>
                           <td className="py-3 text-right text-sm text-muted-foreground">
                             {formatCurrency(remainingAfter)}
@@ -202,36 +368,12 @@ export const InstallmentScheduleModal = ({ debt, payments, onClose }) => {
                 </table>
               </div>
 
-              {hasMore && (
-                <div className="mt-4 rounded-lg border border-border bg-muted/30 p-4 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Showing first 12 of {maxPayments} scheduled payments
-                  </p>
+              {/* Infinite scroll trigger */}
+              {displayCount < maxPayments && (
+                <div ref={observerTarget} className="py-4 text-center">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
                 </div>
               )}
-
-              {/* Summary */}
-              <div className="mt-6 grid grid-cols-1 gap-4 rounded-lg border border-border bg-muted/50 p-4 md:grid-cols-3">
-                <div className="text-center">
-                  <div className="text-sm text-muted-foreground">Total Payments</div>
-                  <div className="mt-1 text-lg font-bold text-foreground">
-                    {debt.number_of_payments || schedule.length}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-muted-foreground">Completed</div>
-                  <div className="mt-1 text-lg font-bold text-success">
-                    {schedule.filter((s) => s.status === 'paid').length}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-sm text-muted-foreground">Remaining</div>
-                  <div className="mt-1 text-lg font-bold text-primary">
-                    {(debt.number_of_payments || schedule.length) -
-                      schedule.filter((s) => s.status === 'paid').length}
-                  </div>
-                </div>
-              </div>
             </>
           )}
         </div>
