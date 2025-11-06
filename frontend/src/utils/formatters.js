@@ -123,3 +123,29 @@ export const parseAmount = (amount) => {
   return parseFloat(amount) || 0
 }
 
+/**
+ * Get debt status based on due date
+ * @param {string} dueDateString - ISO date string
+ * @returns {object} Status object with label and color
+ */
+export const getDebtStatus = (dueDateString) => {
+  if (!dueDateString) {
+    return { label: 'Active', color: 'text-muted-foreground', bgColor: 'bg-muted/50' }
+  }
+
+  const daysUntilDue = getDaysUntilDue(dueDateString)
+
+  if (daysUntilDue < 0) {
+    return { label: 'Overdue', color: 'text-destructive', bgColor: 'bg-destructive/10' }
+  }
+
+  if (daysUntilDue === 0) {
+    return { label: 'Due Today', color: 'text-warning', bgColor: 'bg-warning/10' }
+  }
+
+  if (daysUntilDue <= 7) {
+    return { label: 'Due Soon', color: 'text-warning', bgColor: 'bg-warning/10' }
+  }
+
+  return { label: 'Active', color: 'text-blue-500', bgColor: 'bg-blue-500/10' }
+}

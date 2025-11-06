@@ -67,15 +67,20 @@ export const DashboardPage = () => {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     .slice(0, 6)
 
-  // Get upcoming due dates
-  const upcomingDueDates = debts
+  // Get debts with due dates
+  const debtsWithDueDates = debts
     .filter((debt) => debt.due_date)
     .map((debt) => ({
       ...debt,
       daysUntilDue: getDaysUntilDue(debt.due_date),
     }))
-    .filter((debt) => debt.daysUntilDue !== null && debt.daysUntilDue <= 30)
+    .filter((debt) => debt.daysUntilDue !== null)
     .sort((a, b) => a.daysUntilDue - b.daysUntilDue)
+
+  // Separate overdue and upcoming
+  const overdueDebts = debtsWithDueDates.filter((debt) => debt.daysUntilDue < 0).slice(0, 5)
+  const upcomingDueDates = debtsWithDueDates
+    .filter((debt) => debt.daysUntilDue >= 0 && debt.daysUntilDue <= 30)
     .slice(0, 5)
 
   if (isLoading) {
@@ -147,7 +152,101 @@ export const DashboardPage = () => {
           }
         />
       </div>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {/* Overdue Debts Section */}
+        {overdueDebts.length > 0 && (
+          <div className="card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Overdue Debts</h2>
+              <span className="rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive">
+                {overdueDebts.length} Overdue
+              </span>
+            </div>
+            <div className="space-y-3">
+              {overdueDebts.map((debt) => (
+                <div
+                  key={debt.id}
+                  className="flex cursor-pointer items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-3 transition-colors hover:bg-destructive/10"
+                  onClick={() => setSelectedDebt(debt)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-destructive/20">
+                      <span className="text-sm font-medium text-destructive">
+                        {getInitials(debt.contact?.name || 'Unknown')}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground">
+                        {debt.contact?.name || 'Unknown Contact'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {debt.description || 'No description'}
+                      </p>
+                    </div>
+                  </div>
 
+                  <div className="text-right">
+                    <p
+                      className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                    >
+                      {formatCurrency(parseFloat(debt.total_amount || 0))}
+                    </p>
+                    <p className="text-sm font-medium text-destructive">
+                      Overdue by {Math.abs(debt.daysUntilDue)} day
+                      {Math.abs(debt.daysUntilDue) === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming Due Dates Section */}
+        {upcomingDueDates.length > 0 && (
+          <div className="card p-6">
+            <h2 className="mb-4 text-xl font-semibold text-foreground">Upcoming Due Dates</h2>
+            <div className="space-y-3">
+              {upcomingDueDates.map((debt) => (
+                <div
+                  key={debt.id}
+                  className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+                  onClick={() => setSelectedDebt(debt)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                      <span className="text-sm font-medium text-primary">
+                        {getInitials(debt.contact?.name || 'Unknown')}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-foreground">
+                        {debt.contact?.name || 'Unknown Contact'}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {debt.description || 'No description'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p
+                      className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                    >
+                      {formatCurrency(parseFloat(debt.total_amount || 0))}
+                    </p>
+                    <p className={`text-sm ${getDueDateColor(debt.daysUntilDue)}`}>
+                      {debt.daysUntilDue === 0
+                        ? 'Due today'
+                        : `Due in ${debt.daysUntilDue} day${debt.daysUntilDue === 1 ? '' : 's'}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
       {/* Quick Actions Section */}
       <div className="card p-6">
         <h2 className="mb-4 text-xl font-semibold text-foreground">Quick Actions</h2>
@@ -290,53 +389,6 @@ export const DashboardPage = () => {
           </div>
         )}
       </div>
-
-      {/* Upcoming Due Dates Section */}
-      {upcomingDueDates.length > 0 && (
-        <div className="card p-6">
-          <h2 className="mb-4 text-xl font-semibold text-foreground">Upcoming Due Dates</h2>
-          <div className="space-y-3">
-            {upcomingDueDates.map((debt) => (
-              <div
-                key={debt.id}
-                className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-                onClick={() => setSelectedDebt(debt)}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <span className="text-sm font-medium text-primary">
-                      {getInitials(debt.contact?.name || 'Unknown')}
-                    </span>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-foreground">
-                      {debt.contact?.name || 'Unknown Contact'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      {debt.description || 'No description'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <p
-                    className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
-                  >
-                    {formatCurrency(parseFloat(debt.total_amount || 0))}
-                  </p>
-                  <p className={`text-sm ${getDueDateColor(debt.daysUntilDue)}`}>
-                    {debt.daysUntilDue < 0
-                      ? `Overdue by ${Math.abs(debt.daysUntilDue)} days`
-                      : debt.daysUntilDue === 0
-                        ? 'Due today'
-                        : `Due in ${debt.daysUntilDue} days`}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Create Debt Modal */}
       {showCreateDebtModal && (

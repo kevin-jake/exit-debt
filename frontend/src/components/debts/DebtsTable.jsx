@@ -6,7 +6,13 @@ import { EditDebtModal } from './EditDebtModal'
 import { DeleteDebtModal } from './DeleteDebtModal'
 import { LoadingSpinner } from '@components/common/LoadingSpinner'
 import { EmptyState } from '@components/common/EmptyState'
-import { formatCurrency, formatRelativeTime, getInitials } from '@utils/formatters'
+import {
+  formatCurrency,
+  formatRelativeTime,
+  getInitials,
+  truncateText,
+  getDebtStatus,
+} from '@utils/formatters'
 
 export const DebtsTable = () => {
   const { debts, isLoading, fetchDebts } = useDebtsStore()
@@ -231,6 +237,9 @@ export const DebtsTable = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       Type
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Status
+                    </th>
                     <th
                       className="cursor-pointer px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
                       onClick={() => handleSort('updated_at')}
@@ -249,20 +258,26 @@ export const DebtsTable = () => {
                       className="cursor-pointer transition-colors duration-200 hover:bg-muted/30"
                       onClick={() => viewDebt(debt)}
                     >
-                      <td className="whitespace-nowrap px-6 py-4">
+                      <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                          <div className="mr-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                             <span className="text-sm font-medium text-primary">
                               {getInitials(debt.contact?.name || 'Unknown')}
                             </span>
                           </div>
-                          <div className="text-sm font-medium text-foreground">
+                          <div
+                            className="max-w-[150px] truncate text-sm font-medium text-foreground"
+                            title={debt.contact?.name || 'Unknown Contact'}
+                          >
                             {debt.contact?.name || 'Unknown Contact'}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="max-w-xs truncate text-sm text-muted-foreground">
+                        <div
+                          className="max-w-[200px] truncate text-sm text-muted-foreground"
+                          title={debt.description || 'No description'}
+                        >
                           {debt.description || 'No description'}
                         </div>
                       </td>
@@ -285,6 +300,50 @@ export const DebtsTable = () => {
                         >
                           {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        {(() => {
+                          var status = getDebtStatus(debt.due_date)
+                          if (debt.status && debt.status !== 'active') {
+                            switch (debt.status) {
+                              case 'settled':
+                                status = {
+                                  label: 'Settled',
+                                  color: 'text-success',
+                                  bgColor: 'bg-success/10',
+                                }
+                                break
+                              case 'overdue':
+                                status = {
+                                  label: 'Overdue',
+                                  color: 'text-destructive',
+                                  bgColor: 'bg-destructive/10',
+                                }
+                                break
+                              case 'archived':
+                                status = {
+                                  label: 'Archived',
+                                  color: 'text-muted-foreground',
+                                  bgColor: 'bg-muted/50',
+                                }
+                                break
+                              default:
+                                status = {
+                                  label: 'Active',
+                                  color: 'text-muted-foreground',
+                                  bgColor: 'bg-muted/50',
+                                }
+                                break
+                            }
+                          }
+                          return (
+                            <span
+                              className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${status.color} ${status.bgColor}`}
+                            >
+                              {status.label}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                         {formatRelativeTime(debt.updated_at)}
@@ -368,71 +427,87 @@ export const DebtsTable = () => {
 
           {/* Mobile Card Layout */}
           <div className="space-y-4 lg:hidden">
-            {paginatedDebts.map((debt) => (
-              <div
-                key={debt.id}
-                className="card cursor-pointer p-4"
-                onClick={() => viewDebt(debt)}
-              >
-                <div className="mb-3 flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-sm font-medium text-primary">
-                        {getInitials(debt.contact?.name || 'Unknown')}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-foreground">
-                        {debt.contact?.name || 'Unknown Contact'}
+            {paginatedDebts.map((debt) => {
+              const status = getDebtStatus(debt.due_date)
+              return (
+                <div
+                  key={debt.id}
+                  className="card cursor-pointer p-4"
+                  onClick={() => viewDebt(debt)}
+                >
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <span className="text-sm font-medium text-primary">
+                          {getInitials(debt.contact?.name || 'Unknown')}
+                        </span>
                       </div>
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          debt.debt_type === 'i_owe'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-success/10 text-success'
-                        }`}
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className="truncate font-medium text-foreground"
+                          title={debt.contact?.name || 'Unknown Contact'}
+                        >
+                          {debt.contact?.name || 'Unknown Contact'}
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                              debt.debt_type === 'i_owe'
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'bg-success/10 text-success'
+                            }`}
+                          >
+                            {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                          </span>
+                          <span
+                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${status.color} ${status.bgColor}`}
+                          >
+                            {status.label}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
+                      {formatRelativeTime(debt.updated_at)}
+                    </span>
+                  </div>
+
+                  <p
+                    className="mb-3 truncate text-sm text-muted-foreground"
+                    title={debt.description || 'No description'}
+                  >
+                    {debt.description || 'No description'}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`text-lg font-semibold ${
+                        debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                      }`}
+                    >
+                      {formatCurrency(parseFloat(debt.total_amount || 0))}
+                    </span>
+                    <div
+                      className="flex justify-end space-x-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => viewDebt(debt)}
+                        className="btn-secondary px-3 py-1 text-xs"
                       >
-                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
-                      </span>
+                        View
+                      </button>
+                      <button
+                        onClick={() => editDebt(debt)}
+                        className="btn-secondary px-3 py-1 text-xs"
+                      >
+                        Edit
+                      </button>
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(debt.updated_at)}
-                  </span>
                 </div>
-
-                <p className="mb-3 text-sm text-muted-foreground">
-                  {debt.description || 'No description'}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-lg font-semibold ${
-                      debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
-                    }`}
-                  >
-                    {formatCurrency(parseFloat(debt.total_amount || 0))}
-                  </span>
-                  <div
-                    className="flex justify-end space-x-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={() => viewDebt(debt)}
-                      className="btn-secondary px-3 py-1 text-xs"
-                    >
-                      View
-                    </button>
-                    <button
-                      onClick={() => editDebt(debt)}
-                      className="btn-secondary px-3 py-1 text-xs"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Pagination */}
@@ -510,4 +585,3 @@ export const DebtsTable = () => {
     </div>
   )
 }
-

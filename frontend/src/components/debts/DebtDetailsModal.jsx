@@ -7,7 +7,7 @@ import { InstallmentScheduleModal } from './InstallmentScheduleModal'
 import {
   formatCurrency,
   formatDate,
-  formatRelativeTime,
+  getDebtStatus,
   getDaysUntilDue,
   getDueDateColor,
 } from '@utils/formatters'
@@ -195,7 +195,16 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                 {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
               </span>
               <div className="text-sm text-muted-foreground">
-                Updated {formatRelativeTime(debt.updated_at)}
+                {(() => {
+                  const status = getDebtStatus(debt.due_date)
+                  return (
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 ${status.color} ${status.bgColor}`}
+                    >
+                      {status.label}
+                    </span>
+                  )
+                })()}
               </div>
             </div>
 
@@ -234,47 +243,58 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
             </div>
 
             {/* Contact Information */}
-            <div className="rounded-lg border border-border p-4">
-              <div className="mb-2 text-sm font-medium text-muted-foreground">Contact</div>
-              <div className="flex items-center space-x-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <span className="text-lg font-medium text-primary">
-                    {debt.contact?.name
-                      ?.split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase() || 'U'}
-                  </span>
-                </div>
-                <div>
-                  <div className="font-medium text-foreground">
-                    {debt.contact?.name || 'Unknown Contact'}
-                  </div>
-                  {debt.contact?.email && (
-                    <div className="text-sm text-muted-foreground">{debt.contact.email}</div>
-                  )}
-                  {debt.contact?.phone && (
-                    <div className="text-sm text-muted-foreground">{debt.contact.phone}</div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="rounded-lg border border-border p-4">
-              <div className="mb-2 text-sm font-medium text-muted-foreground">Description</div>
-              <div className="text-foreground">{debt.description || 'No description provided'}</div>
-            </div>
-
-            {/* Due Date */}
-            {debt.due_date && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-lg border border-border p-4">
-                <div className="mb-2 text-sm font-medium text-muted-foreground">Due Date</div>
-                <div className="flex items-center justify-between">
-                  <div className="text-foreground">{formatDate(debt.due_date)}</div>
+                <div className="mb-2 text-sm font-medium text-muted-foreground">Contact</div>
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-lg font-medium text-primary">
+                      {debt.contact?.name
+                        ?.split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-foreground">
+                      {debt.contact?.name || 'Unknown Contact'}
+                    </div>
+                    {debt.contact?.email && (
+                      <div className="text-sm text-muted-foreground">{debt.contact.email}</div>
+                    )}
+                    {debt.contact?.phone && (
+                      <div className="text-sm text-muted-foreground">{debt.contact.phone}</div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+              {/* Due Date */}
+              {debt.due_date && (
+                <div className="rounded-lg border border-border p-4">
+                  <div className="mb-2 text-sm font-medium text-muted-foreground">Due Date</div>
+                  <div className="flex flex-col justify-between">
+                    <div className="text-foreground">{formatDate(debt.due_date)}</div>
+                    {getDaysUntilDue(debt.due_date) !== null && debt.status !== 'settled' && (
+                      <span
+                        className={`text-sm font-medium ${getDueDateColor(getDaysUntilDue(debt.due_date))}`}
+                      >
+                        {getDaysUntilDue(debt.due_date) <= 3
+                          ? getDaysUntilDue(debt.due_date) === 0
+                            ? 'Due today'
+                            : debt.status === 'overdue'
+                              ? `Overdue by ${Math.abs(getDaysUntilDue(debt.due_date))} days`
+                              : `⚠️ Due in ${getDaysUntilDue(debt.due_date)} day${getDaysUntilDue(debt.due_date) === 1 ? '' : 's'}`
+                          : ''}
+                      </span>
+                    )}
+                    {debt.status === 'settled' && (
+                      <span className="text-sm font-medium text-muted-foreground">Settled</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Next Payment Date */}
             {debt.installment_plan &&
@@ -368,14 +388,6 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                 </div>
               )}
 
-            {/* Notes */}
-            {debt.notes && (
-              <div className="rounded-lg border border-border p-4">
-                <div className="mb-2 text-sm font-medium text-muted-foreground">Notes</div>
-                <div className="whitespace-pre-wrap text-foreground">{debt.notes}</div>
-              </div>
-            )}
-
             {/* Payment History */}
             <PaymentHistory
               debtPayments={debtPayments}
@@ -397,15 +409,27 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
               }}
             />
 
+            {/* Description */}
+            <div className="rounded-lg border border-border p-4">
+              <div className="mb-2 text-sm font-medium text-muted-foreground">Description</div>
+              <div className="text-foreground">{debt.description || 'No description provided'}</div>
+            </div>
+
+            {/* Notes */}
+            {debt.notes && (
+              <div className="rounded-lg border border-border p-4">
+                <div className="mb-2 text-sm font-medium text-muted-foreground">Notes</div>
+                <div className="whitespace-pre-wrap text-foreground">{debt.notes}</div>
+              </div>
+            )}
+
             {/* Timestamps */}
-            <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-4">
+            <div className="mt-6 flex justify-between px-1 pb-2 text-xs text-muted-foreground">
               <div>
-                <div className="mb-1 text-sm font-medium text-muted-foreground">Created</div>
-                <div className="text-sm text-foreground">{formatDate(debt.created_at)}</div>
+                Created: <span className="text-foreground">{formatDate(debt.created_at)}</span>
               </div>
               <div>
-                <div className="mb-1 text-sm font-medium text-muted-foreground">Last Updated</div>
-                <div className="text-sm text-foreground">{formatDate(debt.updated_at)}</div>
+                Last Updated: <span className="text-foreground">{formatDate(debt.updated_at)}</span>
               </div>
             </div>
           </div>
