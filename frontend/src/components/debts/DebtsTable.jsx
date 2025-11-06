@@ -459,16 +459,13 @@ export const DebtsTable = () => {
                           >
                             {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
                           </span>
-                          <span
-                            className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${status.color} ${status.bgColor}`}
-                          >
-                            {status.label}
-                          </span>
                         </div>
                       </div>
                     </div>
-                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">
-                      {formatRelativeTime(debt.updated_at)}
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${status.color} ${status.bgColor}`}
+                    >
+                      {status.label}
                     </span>
                   </div>
 
@@ -512,8 +509,8 @@ export const DebtsTable = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col items-center justify-between space-y-2 md:flex-row">
+              <div className="text-center text-sm text-muted-foreground md:text-left">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
                 {Math.min(currentPage * itemsPerPage, filteredAndSortedDebts.length)} of{' '}
                 {filteredAndSortedDebts.length} debts

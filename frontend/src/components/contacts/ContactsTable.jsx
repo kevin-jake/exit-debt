@@ -418,9 +418,6 @@ export const ContactsTable = () => {
                     </div>
                     <div>
                       <div className="font-medium text-foreground">{contact.name}</div>
-                      <span className="inline-flex rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                        Regular Contact
-                      </span>
                     </div>
                   </div>
                   <span className="text-xs text-muted-foreground">
@@ -487,8 +484,8 @@ export const ContactsTable = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground">
+            <div className="flex flex-col items-center justify-between space-y-2 md:flex-row">
+              <div className="text-center text-sm text-muted-foreground md:text-left">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
                 {Math.min(currentPage * itemsPerPage, filteredAndSortedContacts.length)} of{' '}
                 {filteredAndSortedContacts.length} contacts

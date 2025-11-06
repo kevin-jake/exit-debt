@@ -15,7 +15,7 @@ export const DebtsPage = () => {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
-      <div className="flex flex-col items-center justify-between md:flex-row">
+      <div className="flex flex-col items-center justify-between space-y-2 md:flex-row">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Debt Management</h1>
           <p className="mt-1 text-muted-foreground">

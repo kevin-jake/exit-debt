@@ -364,7 +364,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                               : getDaysUntilDue(nextPaymentInfo.due_date) === 0
                                 ? 'Due today'
                                 : getDaysUntilDue(nextPaymentInfo.due_date) <= 3
-                                  ? `Due in ${getDaysUntilDue(nextPaymentInfo.due_date)} day${getDaysUntilDue(nextPaymentInfo.due_date) === 1 ? '' : 's'} ⚠️`
+                                  ? `⚠️ Due in ${getDaysUntilDue(nextPaymentInfo.due_date)} day${getDaysUntilDue(nextPaymentInfo.due_date) === 1 ? '' : 's'}`
                                   : `Due in ${getDaysUntilDue(nextPaymentInfo.due_date)} days`}
                           </span>
                         )}
@@ -453,7 +453,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
             )}
 
             {/* Timestamps */}
-            <div className="mt-6 flex justify-between px-1 pb-2 text-xs text-muted-foreground">
+            <div className="mt-6 flex flex-col justify-between space-y-2 px-1 pb-2 text-xs text-muted-foreground md:flex-row">
               <div>
                 Created: <span className="text-foreground">{formatDate(debt.created_at)}</span>
               </div>

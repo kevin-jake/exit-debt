@@ -190,7 +190,7 @@ export const DashboardPage = () => {
                       {formatCurrency(parseFloat(debt.total_amount || 0))}
                     </p>
                     <p className="text-sm font-medium text-destructive">
-                      Overdue by {Math.abs(debt.daysUntilDue)} day
+                      {Math.abs(debt.daysUntilDue)} day
                       {Math.abs(debt.daysUntilDue) === 1 ? '' : 's'}
                     </p>
                   </div>
