@@ -771,11 +771,95 @@ func (s *debtService) GetUpcomingPayments(ctx context.Context, userID uuid.UUID,
 	}
 
 	var upcomingPayments []entities.UpcomingPayment
-	cutoffDate := time.Now().AddDate(0, 0, days)
+	now := time.Now()
+	cutoffDate := now.AddDate(0, 0, days)
 
 	for _, debtList := range debtLists {
-		if debtList.Status == "active" || debtList.Status == "overdue" {
-			if debtList.NextPaymentDate.After(time.Now()) && debtList.NextPaymentDate.Before(cutoffDate) {
+		// Skip settled or archived debts
+		if debtList.Status == "settled" || debtList.Status == "archived" {
+			continue
+		}
+		
+		// Only consider active or overdue debts with remaining balance
+		if (debtList.Status == "active" || debtList.Status == "overdue") && debtList.TotalRemainingDebt.GreaterThan(decimal.Zero) {
+			var paymentDate time.Time
+			var amountToPay decimal.Decimal
+			
+			// Check if the debt list's final due date is overdue
+			// If so, prioritize showing that over individual installments
+			if debtList.DueDate.Before(now) {
+				// Debt list due date is overdue - show this instead of installments
+				paymentDate = debtList.DueDate
+				amountToPay = debtList.TotalRemainingDebt
+			} else if debtList.InstallmentPlan == "onetime" {
+				// For onetime payments, use the due date
+				paymentDate = debtList.DueDate
+				// Amount is the remaining debt (considering completed payments)
+				amountToPay = debtList.TotalRemainingDebt
+			} else {
+				// For recurring payments with non-overdue final due date, get next installment
+				// Get completed payments for this debt list
+				payments, err := s.debtItemRepo.GetCompletedPaymentsForDebtList(ctx, debtList.ID)
+				if err != nil {
+					// If we can't get payments, skip this debt
+					continue
+				}
+				
+				// Convert DebtListResponse to DebtList for schedule calculation
+				debtListEntity := &entities.DebtList{
+					ID:                  debtList.ID,
+					UserID:              debtList.UserID,
+					ContactID:           debtList.ContactID,
+					DebtType:            debtList.DebtType,
+					TotalAmount:         debtList.TotalAmount,
+					InstallmentAmount:   debtList.InstallmentAmount,
+					TotalPaymentsMade:   debtList.TotalPaymentsMade,
+					TotalRemainingDebt:  debtList.TotalRemainingDebt,
+					Currency:            debtList.Currency,
+					Status:              debtList.Status,
+					DueDate:             debtList.DueDate,
+					NextPaymentDate:     debtList.NextPaymentDate,
+					InstallmentPlan:     debtList.InstallmentPlan,
+					NumberOfPayments:    debtList.NumberOfPayments,
+					Description:         debtList.Description,
+					Notes:               debtList.Notes,
+					CreatedAt:           debtList.CreatedAt,
+					UpdatedAt:           debtList.UpdatedAt,
+				}
+				
+				// Calculate payment schedule
+				schedule := s.paymentScheduleService.CalculatePaymentSchedule(debtListEntity, payments)
+				
+				// Find the first pending payment in the schedule
+				var nextScheduleItem *entities.PaymentScheduleItem
+				for i := range schedule {
+					if schedule[i].Status == "pending" || schedule[i].Status == "overdue" {
+						nextScheduleItem = &schedule[i]
+						break
+					}
+				}
+				
+				// If no pending payment found, skip this debt
+				if nextScheduleItem == nil {
+					continue
+				}
+				
+				paymentDate = nextScheduleItem.DueDate
+				amountToPay = nextScheduleItem.Amount
+			}
+			// Calculate days until due (negative if overdue, positive if upcoming), based on date only
+			// Strip the time component from both dates to compare by date
+			y, m, d := now.Date()
+			nowDate := time.Date(y, m, d, 0, 0, 0, 0, now.Location())
+			py, pm, pd := paymentDate.Date()
+			paymentDateOnly := time.Date(py, pm, pd, 0, 0, 0, 0, paymentDate.Location())
+			daysUntilDue := int(paymentDateOnly.Sub(nowDate).Hours() / 24)
+			
+			// Include payment if it's overdue OR within the upcoming range
+			isOverdue := paymentDate.Before(now)
+			isUpcoming := paymentDate.After(now) && (paymentDate.Before(cutoffDate) || paymentDate.Equal(cutoffDate))
+			
+			if isOverdue || isUpcoming {
 				// Get contact name from UserContact (user-specific)
 				userContact, err := s.contactRepo.GetUserContactRelation(ctx, userID, debtList.ContactID)
 				contactName := "Unknown"
@@ -787,8 +871,9 @@ func (s *debtService) GetUpcomingPayments(ctx context.Context, userID uuid.UUID,
 					DebtListID:      debtList.ID,
 					ContactName:     contactName,
 					DebtType:        debtList.DebtType,
-					NextPaymentDate: debtList.NextPaymentDate,
-					Amount:          debtList.InstallmentAmount,
+					NextPaymentDate: paymentDate,
+					DaysUntilDue:    daysUntilDue,
+					Amount:          amountToPay,
 					Currency:        debtList.Currency,
 					Description:     debtList.Description,
 				}

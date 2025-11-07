@@ -27,6 +27,7 @@ export const DashboardPage = () => {
   const [showCreateContactModal, setShowCreateContactModal] = useState(false)
   const [selectedDebt, setSelectedDebt] = useState(null)
   const [editingDebt, setEditingDebt] = useState(null)
+  const [upcomingPayments, setUpcomingPayments] = useState([])
 
   useEffect(() => {
     loadData()
@@ -35,7 +36,7 @@ export const DashboardPage = () => {
   const loadData = async () => {
     setIsLoading(true)
     try {
-      await Promise.all([fetchDebts(), fetchContacts()])
+      await Promise.all([fetchDebts(), fetchContacts(), fetchUpcomingPayments()])
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
     } finally {
@@ -43,9 +44,20 @@ export const DashboardPage = () => {
     }
   }
 
+  const fetchUpcomingPayments = async () => {
+    try {
+      const { apiClient } = await import('@/api/client')
+      const payments = await apiClient.getUpcomingPayments(7) // Get upcoming payments for next 7 days
+      setUpcomingPayments(payments || [])
+    } catch (error) {
+      console.error('Failed to fetch upcoming payments:', error)
+      setUpcomingPayments([])
+    }
+  }
+
   const handleDebtCreated = async () => {
     setShowCreateDebtModal(false)
-    await fetchDebts()
+    await Promise.all([fetchDebts(), fetchUpcomingPayments()])
   }
 
   const handleContactCreated = async () => {
@@ -67,20 +79,15 @@ export const DashboardPage = () => {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
     .slice(0, 6)
 
-  // Get debts with due dates
-  const debtsWithDueDates = debts
-    .filter((debt) => debt.due_date)
-    .map((debt) => ({
-      ...debt,
-      daysUntilDue: getDaysUntilDue(debt.due_date),
-    }))
-    .filter((debt) => debt.daysUntilDue !== null)
-    .sort((a, b) => a.daysUntilDue - b.daysUntilDue)
+  // Split upcoming payments into overdue and upcoming based on days_until_due
+  const overduePayments = upcomingPayments
+    .filter((payment) => payment.days_until_due < 0)
+    .sort((a, b) => a.days_until_due - b.days_until_due) // Most overdue first
+    .slice(0, 5)
 
-  // Separate overdue and upcoming
-  const overdueDebts = debtsWithDueDates.filter((debt) => debt.daysUntilDue < 0).slice(0, 5)
-  const upcomingDueDates = debtsWithDueDates
-    .filter((debt) => debt.daysUntilDue >= 0 && debt.daysUntilDue <= 30)
+  const upcomingDueDates = upcomingPayments
+    .filter((payment) => payment.days_until_due >= 0)
+    .sort((a, b) => a.days_until_due - b.days_until_due) // Soonest first
     .slice(0, 5)
 
   if (isLoading) {
@@ -152,99 +159,113 @@ export const DashboardPage = () => {
           }
         />
       </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Overdue Debts Section */}
-        {overdueDebts.length > 0 && (
-          <div className="card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-foreground">Overdue Debts</h2>
-              <span className="rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive">
-                {overdueDebts.length} Overdue
-              </span>
-            </div>
-            <div className="space-y-3">
-              {overdueDebts.map((debt) => (
-                <div
-                  key={debt.id}
-                  className="flex cursor-pointer items-center justify-between rounded-lg border p-3"
-                  onClick={() => setSelectedDebt(debt)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-sm font-medium">
-                        {getInitials(debt.contact?.name || 'Unknown')}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">{debt.contact?.name || 'Unknown Contact'}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+      {(overduePayments.length > 0 || upcomingDueDates.length > 0) && (
+        <div
+          className={`grid grid-cols-1 gap-6 ${upcomingDueDates.length > 0 ? 'md:grid-cols-2' : ''}`}
+        >
+          {/* Overdue Payments Section */}
+          {overduePayments.length > 0 && (
+            <div className="card p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-foreground">Overdue Payments</h2>
+                <span className="rounded-full bg-destructive/10 px-3 py-1 text-sm font-medium text-destructive">
+                  {overduePayments.length} Overdue
+                </span>
+              </div>
+              <div className="space-y-3">
+                {overduePayments.map((payment) => {
+                  // Find the debt to navigate to it on click
+                  const debt = debts.find((d) => d.id === payment.debt_list_id)
+                  return (
+                    <div
+                      key={payment.debt_list_id}
+                      className="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                      onClick={() => debt && setSelectedDebt(debt)}
                     >
-                      {formatCurrency(parseFloat(debt.total_amount || 0))}
-                    </p>
-                    <p className="text-sm font-medium text-destructive">
-                      {Math.abs(debt.daysUntilDue)} day
-                      {Math.abs(debt.daysUntilDue) === 1 ? '' : 's'}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center space-x-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <span className="text-sm font-medium text-primary">
+                            {getInitials(payment.contact_name || 'Unknown')}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-foreground">
+                            {payment.contact_name || 'Unknown Contact'}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {payment.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p
+                          className={`font-semibold ${payment.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                        >
+                          {formatCurrency(parseFloat(payment.amount || 0))}
+                        </p>
+                        <p className="text-sm font-medium text-destructive">
+                          {Math.abs(payment.days_until_due)} day
+                          {Math.abs(payment.days_until_due) === 1 ? '' : 's'} overdue
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Upcoming Due Dates Section */}
-        {upcomingDueDates.length > 0 && (
-          <div className="card p-6">
-            <h2 className="mb-4 text-xl font-semibold text-foreground">Upcoming Due Dates</h2>
-            <div className="space-y-3">
-              {upcomingDueDates.map((debt) => (
-                <div
-                  key={debt.id}
-                  className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
-                  onClick={() => setSelectedDebt(debt)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <span className="text-sm font-medium text-primary">
-                        {getInitials(debt.contact?.name || 'Unknown')}
-                      </span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-foreground">
-                        {debt.contact?.name || 'Unknown Contact'}
-                      </h4>
-                      <p className="text-sm text-muted-foreground">
-                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+          {/* Upcoming Installment Dates Section */}
+          {upcomingDueDates.length > 0 && (
+            <div className="card p-6">
+              <h2 className="mb-4 text-xl font-semibold text-foreground">Upcoming Due Dates</h2>
+              <div className="space-y-3">
+                {upcomingDueDates.map((payment) => {
+                  // Find the debt to navigate to it on click
+                  const debt = debts.find((d) => d.id === payment.debt_list_id)
+                  return (
+                    <div
+                      key={payment.debt_list_id}
+                      className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/50"
+                      onClick={() => debt && setSelectedDebt(debt)}
                     >
-                      {formatCurrency(parseFloat(debt.total_amount || 0))}
-                    </p>
-                    <p className={`text-sm ${getDueDateColor(debt.daysUntilDue)}`}>
-                      {debt.daysUntilDue === 0
-                        ? 'Due today'
-                        : `Due in ${debt.daysUntilDue} day${debt.daysUntilDue === 1 ? '' : 's'}`}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center space-x-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                          <span className="text-sm font-medium text-primary">
+                            {getInitials(payment.contact_name || 'Unknown')}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-foreground">
+                            {payment.contact_name || 'Unknown Contact'}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {payment.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p
+                          className={`font-semibold ${payment.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                        >
+                          {formatCurrency(parseFloat(payment.amount || 0))}
+                        </p>
+                        <p className={`text-sm ${getDueDateColor(payment.days_until_due)}`}>
+                          {payment.days_until_due === 0
+                            ? 'Due today'
+                            : `Due in ${payment.days_until_due} day${payment.days_until_due === 1 ? '' : 's'}`}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
       {/* Quick Actions Section */}
       <div className="card p-6">
         <h2 className="mb-4 text-xl font-semibold text-foreground">Quick Actions</h2>
@@ -418,7 +439,7 @@ export const DashboardPage = () => {
               try {
                 await useDebtsStore.getState().deleteDebt(selectedDebt.id)
                 setSelectedDebt(null)
-                await fetchDebts()
+                await Promise.all([fetchDebts(), fetchUpcomingPayments()])
               } catch (error) {
                 console.error('Failed to delete debt:', error)
                 alert('Failed to delete debt. Please try again.')
@@ -435,7 +456,7 @@ export const DashboardPage = () => {
           onClose={() => setEditingDebt(null)}
           onDebtUpdated={async () => {
             setEditingDebt(null)
-            await fetchDebts()
+            await Promise.all([fetchDebts(), fetchUpcomingPayments()])
           }}
         />
       )}

@@ -148,6 +148,7 @@ type UpcomingPayment struct {
 	ContactName     string          `json:"contact_name"`
 	DebtType        string          `json:"debt_type"`
 	NextPaymentDate time.Time       `json:"next_payment_date"`
+	DaysUntilDue    int             `json:"days_until_due"`
 	Amount          decimal.Decimal `json:"amount"`
 	Currency        string          `json:"currency"`
 	Description     *string         `json:"description"`

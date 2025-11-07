@@ -287,8 +287,8 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                         {getDaysUntilDue(debt.due_date) <= 3
                           ? getDaysUntilDue(debt.due_date) === 0
                             ? 'Due today'
-                            : debt.status === 'overdue'
-                              ? `Overdue by ${Math.abs(getDaysUntilDue(debt.due_date))} days`
+                            : debt.status === 'overdue' || getDaysUntilDue(debt.due_date) < 0
+                              ? `Overdue by ${Math.abs(getDaysUntilDue(debt.due_date))} day${Math.abs(getDaysUntilDue(debt.due_date)) === 1 ? '' : 's'}`
                               : `⚠️ Due in ${getDaysUntilDue(debt.due_date)} day${getDaysUntilDue(debt.due_date) === 1 ? '' : 's'}`
                           : ''}
                       </span>
