@@ -11,7 +11,18 @@ type UserSettings struct {
 	UserID              uuid.UUID `json:"user_id" gorm:"type:uuid;not null;uniqueIndex"`
 	NotificationEmail   bool      `json:"notification_email" gorm:"default:true"`
 	NotificationSMS     bool      `json:"notification_sms" gorm:"default:false"`
-	NotificationFacebook bool     `json:"notification_facebook" gorm:"default:false"`
+	NotificationWebhook bool      `json:"notification_webhook" gorm:"default:false"`
+	
+	// Webhook configurations
+	SlackWebhookURL     *string   `json:"slack_webhook_url"`
+	TelegramBotToken    *string   `json:"telegram_bot_token"`
+	TelegramChatID      *string   `json:"telegram_chat_id"`
+	DiscordWebhookURL   *string   `json:"discord_webhook_url"`
+	
+	// Event notification settings
+	EventNotificationsEnabled bool  `json:"event_notifications_enabled" gorm:"default:true"`
+	NotifyContactOnPayment    bool  `json:"notify_contact_on_payment" gorm:"default:true"`
+	
 	DefaultCurrency     string    `json:"default_currency" gorm:"default:'Php'"`
 	Timezone           string    `json:"timezone" gorm:"default:'UTC'"`
 	CreatedAt          time.Time `json:"created_at"`
@@ -24,7 +35,13 @@ type UserSettings struct {
 type UpdateUserSettingsRequest struct {
 	NotificationEmail   *bool   `json:"notification_email"`
 	NotificationSMS     *bool   `json:"notification_sms"`
-	NotificationFacebook *bool  `json:"notification_facebook"`
-	DefaultCurrency     *string `json:"default_currency"`
-	Timezone           *string `json:"timezone"`
+	NotificationWebhook *bool   `json:"notification_webhook"`
+	SlackWebhookURL     *string `json:"slack_webhook_url"`
+	TelegramBotToken         *string `json:"telegram_bot_token"`
+	TelegramChatID           *string `json:"telegram_chat_id"`
+	DiscordWebhookURL        *string `json:"discord_webhook_url"`
+	EventNotificationsEnabled *bool  `json:"event_notifications_enabled"`
+	NotifyContactOnPayment    *bool  `json:"notify_contact_on_payment"`
+	DefaultCurrency          *string `json:"default_currency"`
+	Timezone                 *string `json:"timezone"`
 } 
