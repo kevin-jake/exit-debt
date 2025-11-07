@@ -246,63 +246,90 @@ func (s *debtService) UpdateDebtList(ctx context.Context, id uuid.UUID, userID u
 		return nil, fmt.Errorf("failed to get debt list: %w", err)
 	}
 
-	// Update fields if provided
-	if req.TotalAmount != nil {
-		totalAmount, err := decimal.NewFromString(*req.TotalAmount)
-		if err != nil {
-			return nil, entities.ErrInvalidAmount
-		}
-		debtList.TotalAmount = totalAmount
-		// Recalculate installment amount based on current settings
-		if debtList.NumberOfPayments != nil {
-			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(totalAmount, *debtList.NumberOfPayments)
-		} else {
-			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(totalAmount, debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
-		}
-	}
-
-	if req.InstallmentPlan != nil {
-		debtList.InstallmentPlan = *req.InstallmentPlan
-		// Recalculate installment amount and due date if number of payments is set
-		if debtList.NumberOfPayments != nil {
-			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(debtList.TotalAmount, *debtList.NumberOfPayments)
-			debtList.DueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(debtList.CreatedAt, *debtList.NumberOfPayments, *req.InstallmentPlan)
-		} else {
-			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, *req.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
-		}
-	}
-
-	if req.NumberOfPayments != nil {
-		debtList.NumberOfPayments = req.NumberOfPayments
-		// Recalculate installment amount and due date
-		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(debtList.TotalAmount, *req.NumberOfPayments)
-		debtList.DueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(debtList.CreatedAt, *req.NumberOfPayments, debtList.InstallmentPlan)
-	}
-
+	// Step 1: Update simple fields first
 	if req.Currency != nil {
 		debtList.Currency = *req.Currency
 	}
 	if req.Status != nil {
 		debtList.Status = *req.Status
 	}
-	if req.DueDate != nil {
-		// Validate that due date is in the future
-		now := time.Now()
-		if req.DueDate.Before(now) || req.DueDate.Equal(now) {
-			return nil, entities.ErrInvalidDueDate
-		}
-
-		debtList.DueDate = *req.DueDate
-		// If due date is manually set, clear number of payments as they're now independent
-		debtList.NumberOfPayments = nil
-		// Recalculate installment amount based on new due date
-		debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, debtList.InstallmentPlan, debtList.CreatedAt, *req.DueDate)
-	}
 	if req.Description != nil {
 		debtList.Description = req.Description
 	}
 	if req.Notes != nil {
 		debtList.Notes = req.Notes
+	}
+
+	// Step 2: Update InstallmentPlan (affects all calculations)
+	if req.InstallmentPlan != nil {
+		debtList.InstallmentPlan = *req.InstallmentPlan
+		// For onetime, always set NumberOfPayments to 1
+		if *req.InstallmentPlan == "onetime" {
+			onePayment := 1
+			debtList.NumberOfPayments = &onePayment
+		}
+	}
+
+	// Step 3: Update TotalAmount
+	if req.TotalAmount != nil {
+		totalAmount, err := decimal.NewFromString(*req.TotalAmount)
+		if err != nil {
+			return nil, entities.ErrInvalidAmount
+		}
+		debtList.TotalAmount = totalAmount
+	}
+
+	// Step 4: Update NumberOfPayments (but respect onetime constraint)
+	if req.NumberOfPayments != nil {
+		if debtList.InstallmentPlan == "onetime" {
+			// For onetime payment, always force to 1 regardless of what user provides
+			onePayment := 1
+			debtList.NumberOfPayments = &onePayment
+		} else {
+			debtList.NumberOfPayments = req.NumberOfPayments
+		}
+	}
+
+	// Step 5: Update DueDate
+	if req.DueDate != nil {
+		// Only validate future date for non-onetime payments
+		if debtList.InstallmentPlan != "onetime" {
+			now := time.Now()
+			if req.DueDate.Before(now) || req.DueDate.Equal(now) {
+				return nil, entities.ErrInvalidDueDate
+			}
+		}
+		debtList.DueDate = *req.DueDate
+	}
+
+	// Step 6: Recalculate dependent fields based on final state
+	if debtList.InstallmentPlan == "onetime" {
+		// Onetime payment: installment amount = total amount
+		debtList.InstallmentAmount = debtList.TotalAmount
+		// Ensure NumberOfPayments is 1
+		if debtList.NumberOfPayments == nil {
+			onePayment := 1
+			debtList.NumberOfPayments = &onePayment
+		}
+	} else {
+		// Non-onetime payment: calculate based on NumberOfPayments or DueDate
+		if debtList.NumberOfPayments != nil && *debtList.NumberOfPayments > 0 {
+			// Use NumberOfPayments to calculate installment amount and due date
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmountFromNumberOfPayments(debtList.TotalAmount, *debtList.NumberOfPayments)
+			// Only recalculate due date if it wasn't explicitly set in this request
+			if req.DueDate == nil {
+				debtList.DueDate = s.paymentScheduleService.CalculateDueDateFromNumberOfPayments(debtList.CreatedAt, *debtList.NumberOfPayments, debtList.InstallmentPlan)
+			}
+		} else {
+			// Use DueDate to calculate installment amount and number of payments
+			debtList.InstallmentAmount = s.paymentScheduleService.CalculateInstallmentAmount(debtList.TotalAmount, debtList.InstallmentPlan, debtList.CreatedAt, debtList.DueDate)
+			// Calculate number of payments if not explicitly set
+			if debtList.NumberOfPayments == nil && debtList.InstallmentAmount.GreaterThan(decimal.Zero) {
+				paymentsNeeded := debtList.TotalAmount.Div(debtList.InstallmentAmount).Ceil().IntPart()
+				paymentsNeededInt := int(paymentsNeeded)
+				debtList.NumberOfPayments = &paymentsNeededInt
+			}
+		}
 	}
 
 	debtList.UpdatedAt = time.Now()
@@ -312,11 +339,23 @@ func (s *debtService) UpdateDebtList(ctx context.Context, id uuid.UUID, userID u
 		return nil, fmt.Errorf("invalid updated debt list entity: %w", err)
 	}
 
+	// Save to database
 	if err := s.debtListRepo.Update(ctx, debtList); err != nil {
 		return nil, fmt.Errorf("failed to update debt list: %w", err)
 	}
 
-	return debtList, nil
+	// Recalculate payment totals and status based on actual debt items
+	if err := s.updateDebtListStatusAndPaymentTotals(ctx, debtList.ID); err != nil {
+		return nil, fmt.Errorf("failed to update payment totals: %w", err)
+	}
+
+	// Fetch the updated debt list to return the latest state
+	updatedDebtList, err := s.debtListRepo.GetByID(ctx, debtList.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get updated debt list: %w", err)
+	}
+
+	return updatedDebtList, nil
 }
 
 func (s *debtService) DeleteDebtList(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
