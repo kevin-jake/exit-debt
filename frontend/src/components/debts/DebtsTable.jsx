@@ -115,7 +115,10 @@ export const DebtsTable = () => {
   }
 
   const editDebt = (debt) => {
-    setSelectedDebt(debt)
+    setSelectedDebt({
+      ...debt,
+      payment_type: debt.installment_plan != 'onetime' ? 'installment' : 'onetime',
+    })
     setShowEditModal(true)
   }
 

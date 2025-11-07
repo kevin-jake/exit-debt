@@ -10,6 +10,7 @@ import {
   getDebtStatus,
   getDaysUntilDue,
   getDueDateColor,
+  convertToISO,
 } from '@utils/formatters'
 
 export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
@@ -95,7 +96,11 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
     try {
       setIsSubmitting(true)
       // Convert date string to ISO 8601 datetime format
-      const paymentDateTime = new Date(newPayment.payment_date + 'T12:00:00Z').toISOString()
+      const paymentDateTime = convertToISO(newPayment.payment_date)
+      if (!paymentDateTime) {
+        alert('Invalid payment date')
+        return
+      }
 
       const payment = await createPayment(debt.id, {
         payment_date: paymentDateTime,
@@ -158,10 +163,10 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pb-96"
       onClick={handleOverlayClick}
     >
-      <div className="card my-8 w-full max-w-2xl overflow-hidden">
+      <div className="card my-8 w-full max-w-2xl overflow-visible">
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Debt Details</h2>

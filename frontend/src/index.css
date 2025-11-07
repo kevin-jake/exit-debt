@@ -149,3 +149,92 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/50;
 }
+
+/* React Tailwind Datepicker customization */
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+
+.react-datepicker-popper {
+  @apply z-[100] !important;
+}
+
+/* Ensure datepicker dropdown fits in modals */
+.fixed.inset-0 .react-datepicker-popper {
+  @apply !fixed;
+  max-height: 400px;
+}
+
+/* Datepicker container within modals */
+.card .react-tailwindcss-datepicker {
+  @apply relative;
+}
+
+/* Ensure calendar dropdown is positioned correctly */
+.react-tailwindcss-datepicker > div > div[class*='absolute'] {
+  @apply !fixed;
+  z-index: 9999 !important;
+}
+
+/* Datepicker calendar styling */
+.react-tailwindcss-datepicker {
+  @apply w-full;
+}
+
+/* Calendar dropdown */
+.react-tailwindcss-datepicker .react-tailwindcss-datepicker-calendar {
+  @apply rounded-lg border border-border bg-card shadow-lg;
+}
+
+/* Selected date styling */
+.react-tailwindcss-datepicker .bg-blue-500 {
+  @apply !bg-primary;
+}
+
+.react-tailwindcss-datepicker .text-blue-500 {
+  @apply !text-primary;
+}
+
+/* Hover states */
+.react-tailwindcss-datepicker .hover\:bg-gray-100:hover {
+  @apply !bg-muted;
+}
+
+/* Dark mode support */
+.dark .react-tailwindcss-datepicker .bg-white {
+  @apply !bg-card;
+}
+
+.dark .react-tailwindcss-datepicker .text-gray-700 {
+  @apply !text-foreground;
+}
+
+.dark .react-tailwindcss-datepicker .text-gray-500 {
+  @apply !text-muted-foreground;
+}
+
+.dark .react-tailwindcss-datepicker .border-gray-300 {
+  @apply !border-border;
+}
+
+/* Disabled dates styling */
+.react-tailwindcss-datepicker button[disabled],
+.react-tailwindcss-datepicker button[disabled]:hover {
+  @apply !cursor-not-allowed !text-muted-foreground;
+  opacity: 0.5 !important;
+}
+
+.react-tailwindcss-datepicker .text-gray-400 {
+  @apply !text-muted-foreground;
+}
+
+/* Ensure disabled dates don't have hover effects */
+.react-tailwindcss-datepicker button[disabled] {
+  @apply !bg-transparent;
+}
+
+.dark .react-tailwindcss-datepicker button[disabled],
+.dark .react-tailwindcss-datepicker button[disabled]:hover {
+  @apply !cursor-not-allowed !text-muted-foreground;
+  opacity: 0.5 !important;
+}

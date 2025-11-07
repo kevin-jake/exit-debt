@@ -3,27 +3,85 @@ import { useForm } from 'react-hook-form'
 import { useDebtsStore } from '@stores/debtsStore'
 import { useContactsStore } from '@stores/contactsStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
+import { convertToISO } from '@utils/formatters'
+import { PaymentFields } from './PaymentFields'
 
 export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
   const updateDebt = useDebtsStore((state) => state.updateDebt)
-  const { contacts, fetchContacts } = useContactsStore()
   const { success, error } = useNotificationsStore()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [mouseDownOnOverlay, setMouseDownOnOverlay] = useState(false)
+
+  // Determine payment type based on debt data
+  const getPaymentType = (debtData) => {
+    // If payment_type is explicitly set, use it
+    if (debtData.payment_type) {
+      return debtData.payment_type
+    }
+    // Otherwise, check if debt has installment data (with actual values, not empty strings)
+    const hasInstallments =
+      (debtData.number_of_payments && debtData.number_of_payments > 1) ||
+      (debtData.installment_plan != 'onetime' && debtData.installment_plan.trim() !== '')
+
+    return hasInstallments ? debtData.payment_type : 'onetime'
+  }
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    setValue,
+    reset,
   } = useForm({
     defaultValues: {
       debt_type: debt.debt_type || 'i_owe',
+      payment_type: getPaymentType(debt),
       total_amount: debt.total_amount || '',
       description: debt.description || '',
       due_date: debt.due_date ? debt.due_date.split('T')[0] : '',
       notes: debt.notes || '',
+      number_of_payments: debt.number_of_payments || '',
+      installment_amount: debt.installment_amount || '',
+      installment_plan: debt.installment_plan || 'monthly',
+      next_payment_date: debt.next_payment_date ? debt.next_payment_date.split('T')[0] : '',
+      installment_calculation_method: 'by_count',
     },
   })
+
+  // Reset form when debt changes
+  useEffect(() => {
+    const paymentType = getPaymentType(debt)
+    console.log('Resetting form with payment_type:', paymentType, 'for debt:', debt.id)
+    console.log('Debt data:', {
+      number_of_payments: debt.number_of_payments,
+      installment_plan: debt.installment_plan,
+      payment_type: debt.payment_type,
+    })
+
+    reset({
+      debt_type: debt.debt_type || 'i_owe',
+      payment_type: paymentType,
+      total_amount: debt.total_amount || '',
+      description: debt.description || '',
+      due_date: debt.due_date ? debt.due_date.split('T')[0] : '',
+      notes: debt.notes || '',
+      number_of_payments: debt.number_of_payments || '',
+      installment_amount: debt.installment_amount || '',
+      installment_plan: debt.installment_plan || 'monthly',
+      next_payment_date: debt.next_payment_date ? debt.next_payment_date.split('T')[0] : '',
+      installment_calculation_method: 'by_count',
+    })
+  }, [debt, reset])
+
+  // Watch payment type and reset payment frequency when it changes
+  const paymentType = watch('payment_type')
+  useEffect(() => {
+    // When payment type changes to installment, reset frequency to monthly
+    if (paymentType === 'installment') {
+      setValue('installment_plan', 'monthly')
+    }
+  }, [paymentType, setValue])
 
   const onSubmit = async (data) => {
     setIsSubmitting(true)
@@ -32,12 +90,15 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
       const debtData = {
         ...data,
         total_amount: String(data.total_amount),
+        installment_plan: data.payment_type === 'onetime' ? 'onetime' : data.installment_plan,
+        number_of_payments:
+          data.payment_type === 'installment' ? parseInt(data.number_of_payments) : 1,
       }
 
-      if (debtData.due_date && debtData.due_date.trim() !== '') {
-        debtData.due_date = new Date(debtData.due_date + 'T12:00:00Z').toISOString()
+      const convertedDueDate = convertToISO(debtData.due_date)
+      if (convertedDueDate) {
+        debtData.due_date = convertedDueDate
       } else {
-        // Remove empty due_date field
         delete debtData.due_date
       }
 
@@ -69,11 +130,11 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pb-96"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
-      <div className="card my-8 w-full max-w-lg overflow-hidden">
+      <div className="card my-8 w-full max-w-lg overflow-visible">
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Edit Debt</h2>
@@ -141,6 +202,15 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
               )}
             </div>
 
+            {/* Payment Fields Component */}
+            <PaymentFields
+              register={register}
+              watch={watch}
+              setValue={setValue}
+              errors={errors}
+              isSubmitting={isSubmitting}
+            />
+
             {/* Description */}
             <div>
               <label
@@ -164,23 +234,6 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
               />
               {errors.description && (
                 <p className="mt-1 text-sm text-destructive">{errors.description.message}</p>
-              )}
-            </div>
-
-            {/* Due Date */}
-            <div>
-              <label htmlFor="due_date" className="mb-2 block text-sm font-medium text-foreground">
-                Due Date
-              </label>
-              <input
-                id="due_date"
-                type="date"
-                {...register('due_date')}
-                className="input"
-                disabled={isSubmitting}
-              />
-              {errors.due_date && (
-                <p className="mt-1 text-sm text-destructive">{errors.due_date.message}</p>
               )}
             </div>
 

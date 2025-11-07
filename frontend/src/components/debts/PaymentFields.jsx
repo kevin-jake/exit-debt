@@ -1,5 +1,42 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import Datepicker from 'react-tailwindcss-datepicker'
 import { formatCurrency } from '@utils/formatters'
+
+/**
+ * Calculate minimum date based on payment type and installment plan
+ */
+const calculateMinDate = (paymentType, installmentPlan) => {
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  // For one-time payments, minimum is tomorrow
+  if (paymentType === 'onetime') {
+    return tomorrow.toISOString().split('T')[0]
+  }
+
+  // For installment payments, calculate based on frequency
+  const minDate = new Date(today)
+  switch (installmentPlan) {
+    case 'weekly':
+      minDate.setDate(minDate.getDate() + 7)
+      break
+    case 'biweekly':
+      minDate.setDate(minDate.getDate() + 14)
+      break
+    case 'monthly':
+      minDate.setDate(minDate.getDate() + 30)
+      break
+    case 'quarterly':
+      minDate.setDate(minDate.getDate() + 90)
+      break
+    default:
+      // Default to tomorrow if frequency not set yet
+      return tomorrow.toISOString().split('T')[0]
+  }
+
+  return minDate.toISOString().split('T')[0]
+}
 
 /**
  * Calculate number of installments based on due date and payment frequency
@@ -92,6 +129,11 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
   const paymentFrequency = watch('installment_plan')
   const calculationMethod = watch('installment_calculation_method')
 
+  // Calculate minimum date based on payment type and frequency
+  const minDate = useMemo(() => {
+    return calculateMinDate(paymentType, paymentFrequency)
+  }, [paymentType, paymentFrequency])
+
   // Calculate installments or due date based on method
   useEffect(() => {
     if (paymentType !== 'installment') return
@@ -101,7 +143,7 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
 
       // If calculated installments is 0, automatically convert to one-time payment
       if (calculated === 0) {
-        setValue('payment_type', 'one_time')
+        setValue('payment_type', 'onetime')
         setValue('number_of_payments', '')
         setValue('due_date', '') // Clear due date to allow switching back
         return
@@ -135,7 +177,7 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
           className="input"
           disabled={isSubmitting}
         >
-          <option value="one_time">One-Time Payment</option>
+          <option value="onetime">One-Time Payment</option>
           <option value="installment">Installment Plan</option>
         </select>
         {errors.payment_type && (
@@ -244,17 +286,50 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
               <label htmlFor="due_date" className="mb-2 block text-sm font-medium text-foreground">
                 Due Date <span className="text-destructive">*</span>
               </label>
-              <input
-                id="due_date"
-                type="date"
-                {...register('due_date', {
-                  required: calculationMethod === 'by_date' && 'Due date is required',
-                })}
-                className="input"
+              <Datepicker
+                useRange={false}
+                asSingle={true}
+                value={{ startDate: dueDate || null, endDate: dueDate || null }}
+                onChange={(newValue) => {
+                  if (newValue && newValue.startDate) {
+                    setValue('due_date', newValue.startDate)
+                  } else {
+                    setValue('due_date', '')
+                  }
+                }}
                 disabled={isSubmitting}
+                readOnly={false}
+                displayFormat="MMM DD, YYYY"
+                inputClassName="input w-full pr-10"
+                containerClassName="relative react-tailwindcss-datepicker"
+                toggleClassName="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                placeholder="Select due date"
+                showShortcuts={false}
+                popoverDirection="up"
+                minDate={new Date(minDate)}
+                maxDate={new Date('2099-12-31')}
               />
               {errors.due_date && (
                 <p className="mt-1 text-sm text-destructive">{errors.due_date.message}</p>
+              )}
+              {paymentFrequency && paymentFrequency !== '' && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Minimum date:{' '}
+                  {new Date(minDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}{' '}
+                  (
+                  {paymentFrequency === 'weekly'
+                    ? '7 days'
+                    : paymentFrequency === 'biweekly'
+                      ? '14 days'
+                      : paymentFrequency === 'monthly'
+                        ? '30 days'
+                        : '90 days'}{' '}
+                  from today)
+                </p>
               )}
             </div>
           )}
@@ -294,21 +369,40 @@ export const PaymentFields = ({ register, watch, errors, isSubmitting, setValue 
       )}
 
       {/* Due Date - Only show for one-time payments */}
-      {paymentType === 'one_time' && (
+      {paymentType === 'onetime' && (
         <div>
           <label htmlFor="due_date" className="mb-2 block text-sm font-medium text-foreground">
             Due Date
           </label>
-          <input
-            id="due_date"
-            type="date"
-            {...register('due_date')}
-            className="input"
+          <Datepicker
+            useRange={false}
+            asSingle={true}
+            value={{ startDate: dueDate || null, endDate: dueDate || null }}
+            onChange={(newValue) => {
+              if (newValue && newValue.startDate) {
+                setValue('due_date', newValue.startDate)
+              } else {
+                setValue('due_date', '')
+              }
+            }}
             disabled={isSubmitting}
+            readOnly={false}
+            displayFormat="MMM DD, YYYY"
+            inputClassName="input w-full pr-10"
+            containerClassName="relative react-tailwindcss-datepicker"
+            toggleClassName="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            placeholder="Select due date"
+            showShortcuts={false}
+            popoverDirection="up"
+            minDate={new Date(minDate)}
+            maxDate={new Date('2099-12-31')}
           />
           {errors.due_date && (
             <p className="mt-1 text-sm text-destructive">{errors.due_date.message}</p>
           )}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Select any date from tomorrow onwards
+          </p>
         </div>
       )}
     </>

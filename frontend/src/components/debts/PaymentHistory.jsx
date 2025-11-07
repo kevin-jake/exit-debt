@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Datepicker from 'react-tailwindcss-datepicker'
 import { formatCurrency, formatDate } from '@utils/formatters'
 import { apiClient } from '@api/client'
 
@@ -111,12 +112,31 @@ export const PaymentHistory = ({
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Payment Date
                 </label>
-                <input
-                  type="date"
-                  value={newPayment.payment_date}
-                  onChange={(e) => setNewPayment({ ...newPayment, payment_date: e.target.value })}
-                  className="input"
-                  required
+                <Datepicker
+                  useRange={false}
+                  asSingle={true}
+                  value={{
+                    startDate: newPayment.payment_date || null,
+                    endDate: newPayment.payment_date || null,
+                  }}
+                  onChange={(newValue) => {
+                    if (newValue && newValue.startDate) {
+                      setNewPayment({ ...newPayment, payment_date: newValue.startDate })
+                    } else {
+                      setNewPayment({
+                        ...newPayment,
+                        payment_date: new Date().toISOString().split('T')[0],
+                      })
+                    }
+                  }}
+                  readOnly={false}
+                  displayFormat="MMM DD, YYYY"
+                  inputClassName="input w-full pr-10"
+                  containerClassName="relative"
+                  toggleClassName="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:text-foreground focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Select payment date"
+                  showShortcuts={false}
+                  popoverDirection="up"
                 />
               </div>
               <div>

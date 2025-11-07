@@ -149,3 +149,24 @@ export const getDebtStatus = (dueDateString) => {
 
   return { label: 'Active', color: 'text-blue-500', bgColor: 'bg-blue-500/10' }
 }
+
+/**
+ * Convert a date string to ISO 8601 format
+ * @param {string} dateStr - Date string in YYYY-MM-DD or ISO format
+ * @returns {string|null} ISO formatted date string or null if invalid
+ */
+export const convertToISO = (dateStr) => {
+  if (!dateStr || dateStr === '') return null
+  try {
+    // Handle both YYYY-MM-DD format and ISO format
+    const date = new Date(dateStr)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return null
+    // Set to noon UTC to avoid timezone issues
+    date.setUTCHours(12, 0, 0, 0)
+    return date.toISOString()
+  } catch (e) {
+    console.error('Error converting date:', e)
+    return null
+  }
+}

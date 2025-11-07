@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { useDebtsStore } from '@stores/debtsStore'
 import { useContactsStore } from '@stores/contactsStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
+import { convertToISO } from '@utils/formatters'
 import { PaymentFields } from './PaymentFields'
 import { CreateContactModal } from '../contacts/CreateContactModal'
 
@@ -24,7 +25,7 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
     defaultValues: {
       contact_id: '',
       debt_type: 'i_owe',
-      payment_type: 'one_time',
+      payment_type: 'onetime',
       total_amount: '',
       description: '',
       due_date: '',
@@ -50,10 +51,10 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
         total_amount: String(data.total_amount),
       }
 
-      if (debtData.due_date && debtData.due_date.trim() !== '') {
-        debtData.due_date = new Date(debtData.due_date + 'T12:00:00Z').toISOString()
+      const convertedDueDate = convertToISO(debtData.due_date)
+      if (convertedDueDate) {
+        debtData.due_date = convertedDueDate
       } else {
-        // Remove empty due_date field
         delete debtData.due_date
       }
 
@@ -62,16 +63,17 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
         debtData.number_of_payments = parseInt(data.number_of_payments)
         debtData.installment_plan = data.installment_plan
 
-        if (data.next_payment_date && data.next_payment_date.trim() !== '') {
-          debtData.next_payment_date = new Date(data.next_payment_date + 'T12:00:00Z').toISOString()
+        const convertedNextPaymentDate = convertToISO(data.next_payment_date)
+        if (convertedNextPaymentDate) {
+          debtData.next_payment_date = convertedNextPaymentDate
         } else {
           delete debtData.next_payment_date
         }
       } else {
-        // Remove installment fields for one-time payments
-        delete debtData.number_of_payments
+        // For one-time payments, set installment_plan to 'onetime' and number_of_payments to 1
+        debtData.installment_plan = 'onetime'
+        debtData.number_of_payments = 1
         delete debtData.installment_amount
-        delete debtData.installment_plan
         delete debtData.next_payment_date
       }
 
@@ -112,11 +114,11 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4"
+      className="fixed inset-0 z-50 !mt-0 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pb-96"
       onMouseDown={handleOverlayMouseDown}
       onClick={handleOverlayClick}
     >
-      <div className="card my-8 w-full max-w-lg overflow-hidden">
+      <div className="card my-8 w-full max-w-lg overflow-visible">
         <div className="border-b border-border px-6 py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Create New Debt</h2>
