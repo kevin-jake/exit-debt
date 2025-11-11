@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { useAuthStore } from '@stores/authStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
 import { ROUTES } from '@/routes/routes'
@@ -20,6 +22,7 @@ export const RegisterPage = () => {
     register: registerField,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
   } = useForm()
 
@@ -153,13 +156,30 @@ export const RegisterPage = () => {
               <label htmlFor="phone" className="label">
                 Phone number <span className="text-muted-foreground/60">(optional)</span>
               </label>
-              <input
-                id="phone"
-                type="tel"
-                {...registerField('phone')}
-                className="input"
-                placeholder="Enter your phone number"
+              <Controller
+                name="phone"
+                control={control}
+                rules={{
+                  validate: (value) => {
+                    if (!value) return true // Optional field
+                    return isValidPhoneNumber(value) || 'Please enter a valid phone number'
+                  },
+                }}
+                render={({ field: { onChange, value } }) => (
+                  <PhoneInput
+                    id="phone"
+                    value={value}
+                    onChange={onChange}
+                    defaultCountry="PH"
+                    international
+                    className="input"
+                    placeholder="Enter your phone number"
+                  />
+                )}
               />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-destructive">{errors.phone.message}</p>
+              )}
             </div>
 
             <div>

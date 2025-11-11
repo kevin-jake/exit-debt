@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input'
+import 'react-phone-number-input/style.css'
 import { useContactsStore } from '@stores/contactsStore'
 import { useNotificationsStore } from '@stores/notificationsStore'
 
@@ -14,6 +16,7 @@ export const CreateContactModal = ({ onContactCreated, onClose }) => {
     register,
     handleSubmit,
     watch,
+    control,
     formState: { errors },
   } = useForm()
 
@@ -149,14 +152,31 @@ export const CreateContactModal = ({ onContactCreated, onClose }) => {
             <label htmlFor="contact-phone" className="label">
               Phone
             </label>
-            <input
-              id="contact-phone"
-              type="tel"
-              {...register('phone')}
-              className="input"
-              placeholder="Enter phone number"
-              disabled={isLoading}
+            <Controller
+              name="phone"
+              control={control}
+              rules={{
+                validate: (value) => {
+                  if (!value) return true // Optional field
+                  return isValidPhoneNumber(value) || 'Please enter a valid phone number'
+                },
+              }}
+              render={({ field: { onChange, value } }) => (
+                <PhoneInput
+                  id="contact-phone"
+                  value={value}
+                  onChange={onChange}
+                  defaultCountry="PH"
+                  international
+                  className="input"
+                  placeholder="Enter phone number"
+                  disabled={isLoading}
+                />
+              )}
             />
+            {errors.phone && (
+              <p className="mt-1 text-sm text-destructive">{errors.phone.message}</p>
+            )}
           </div>
 
           {/* Notes Field */}
