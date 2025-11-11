@@ -9,9 +9,9 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
-	"exit-debt/internal/models"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
+	"pay-your-dues/internal/models"
 )
 
 // debtItemRepositoryGORM implements the DebtItemRepository interface using GORM

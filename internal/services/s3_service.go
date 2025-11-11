@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	"exit-debt/internal/config"
+	"pay-your-dues/internal/config"
 )
 
 // S3Service implements the FileStorageService interface

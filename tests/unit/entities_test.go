@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 func TestUser_IsValid(t *testing.T) {

@@ -1,10 +1,10 @@
 services:
   postgres:
     image: postgres
-    container_name: exit-debt-postgres
+    container_name: pay-your-dues-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: debt_tracker
+      POSTGRES_DB: pay_your_dues
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -13,11 +13,11 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - debt-tracker-network
+      - pay-your-dues-network
 
   localstack:
     image: localstack/localstack:latest
-    container_name: exit-debt-localstack
+    container_name: pay-your-dues-localstack
     restart: unless-stopped
     ports:
       - "4566:4566"
@@ -28,7 +28,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./init_s3.py:/etc/localstack/init/ready.d/init_s3.py
     networks:
-      - debt-tracker-network
+      - pay-your-dues-network
 
 volumes:
   postgres_data:
@@ -37,5 +37,5 @@ volumes:
     driver: local
 
 networks:
-  debt-tracker-network:
+  pay-your-dues-network:
     driver: bridge

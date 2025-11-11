@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
-	"exit-debt/internal/mocks"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
+	"pay-your-dues/internal/mocks"
+	"pay-your-dues/internal/services"
 )
 
 type PaymentScheduleIntegrationTestSuite struct {

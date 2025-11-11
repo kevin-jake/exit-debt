@@ -7,9 +7,9 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
-	"exit-debt/internal/models"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
+	"pay-your-dues/internal/models"
 )
 
 // userRepositoryGORM implements the UserRepository interface using GORM

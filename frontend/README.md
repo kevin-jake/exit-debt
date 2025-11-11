@@ -1,4 +1,4 @@
-# Exit Debt Tracker - Frontend
+# Pay Your Dues - Frontend
 
 A modern debt tracking application built with React, Vite, and TailwindCSS.
 
@@ -157,7 +157,7 @@ Create a `.env.development` file based on `.env.example`:
 
 ```env
 VITE_API_URL=http://localhost:8080/api/v1
-VITE_APP_NAME=Exit Debt Tracker
+VITE_APP_NAME=Pay Your Dues
 VITE_APP_VERSION=2.0.0
 ```
 

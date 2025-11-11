@@ -9,12 +9,12 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
-	"exit-debt/internal/mocks"
-	"exit-debt/internal/models"
-	"exit-debt/internal/repository"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
+	"pay-your-dues/internal/mocks"
+	"pay-your-dues/internal/models"
+	"pay-your-dues/internal/repository"
+	"pay-your-dues/internal/services"
 )
 
 type UserContactDebtWorkflowTestSuite struct {

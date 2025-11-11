@@ -1,4 +1,4 @@
-module exit-debt
+module pay-your-dues
 
 go 1.23
 

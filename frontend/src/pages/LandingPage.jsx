@@ -6,7 +6,7 @@ export const LandingPage = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center">
-          <h1 className="mb-4 text-5xl font-bold text-primary">Exit Debt Tracker</h1>
+          <h1 className="mb-4 text-5xl font-bold text-primary">Pay Your Dues</h1>
           <p className="mb-8 text-xl text-muted-foreground">
             Manage your debts and payments efficiently
           </p>

@@ -56,7 +56,7 @@ func Load() (*Config, error) {
 		DBPort:     port,
 		DBUser:     getEnv("DB_USER", "postgres"),
 		DBPassword: getEnv("DB_PASSWORD", "password"),
-		DBName:     getEnv("DB_NAME", "debt_tracker"),
+		DBName:     getEnv("DB_NAME", "pay_your_dues"),
 		DBSSLMode:  getEnv("DB_SSL_MODE", "disable"),
 
 		ServerPort: getEnv("SERVER_PORT", "8080"),

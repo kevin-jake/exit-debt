@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 // DebtService defines the interface for debt management operations

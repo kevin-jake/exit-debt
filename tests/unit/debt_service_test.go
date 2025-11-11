@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/mocks"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/mocks"
+	"pay-your-dues/internal/services"
 )
 
 func TestDebtService_CreateDebtList(t *testing.T) {

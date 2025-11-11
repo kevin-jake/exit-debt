@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"exit-debt/internal/models"
+	"pay-your-dues/internal/models"
 )
 
 type Database struct {

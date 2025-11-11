@@ -28,14 +28,14 @@ docker-compose down -v
 
 - **Host**: localhost
 - **Port**: 5432
-- **Database**: debt_tracker
+- **Database**: pay_your_dues
 - **Username**: postgres
 - **Password**: postgres
 
 ### Connection String
 
 ```
-postgresql://postgres:postgres@localhost:5432/debt_tracker
+postgresql://postgres:postgres@localhost:5432/pay_your_dues
 ```
 
 ## Features
@@ -84,7 +84,7 @@ docker-compose logs postgres
 ### Connect to database
 
 ```bash
-docker-compose exec postgres psql -U postgres -d debt_tracker
+docker-compose exec postgres psql -U postgres -d pay_your_dues
 ```
 
 ### Reset database

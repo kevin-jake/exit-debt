@@ -13,12 +13,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"exit-debt/internal/config"
-	"exit-debt/internal/database"
-	"exit-debt/internal/handlers"
-	"exit-debt/internal/middleware"
-	"exit-debt/internal/repository"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/config"
+	"pay-your-dues/internal/database"
+	"pay-your-dues/internal/handlers"
+	"pay-your-dues/internal/middleware"
+	"pay-your-dues/internal/repository"
+	"pay-your-dues/internal/services"
 )
 
 func main() {
@@ -112,7 +112,7 @@ func main() {
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status":    "ok",
-			"service":   "debt-tracker-api",
+			"service":   "pay-your-dues-api",
 			"version":   "1.0.0",
 			"timestamp": time.Now(),
 		})

@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/mock"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 // MockDebtListRepository is a mock implementation of DebtListRepository

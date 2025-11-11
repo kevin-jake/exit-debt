@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
 )
 
 // AuthHandler handles authentication-related HTTP requests

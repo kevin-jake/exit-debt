@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
 )
 
 // authService implements the AuthService interface

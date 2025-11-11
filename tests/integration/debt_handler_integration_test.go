@@ -15,9 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/handlers"
-	"exit-debt/internal/mocks"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/handlers"
+	"pay-your-dues/internal/mocks"
 )
 
 func TestDebtHandler_CreateDebtList(t *testing.T) {

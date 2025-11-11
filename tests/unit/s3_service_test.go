@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"exit-debt/internal/config"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/config"
+	"pay-your-dues/internal/services"
 )
 
 // MockS3Client is a mock implementation of the S3 client

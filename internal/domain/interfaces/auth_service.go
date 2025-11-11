@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 // AuthService defines the interface for authentication operations

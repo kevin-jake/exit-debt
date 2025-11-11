@@ -8,7 +8,7 @@
 -- For example, creating additional schemas, users, or initial data
 
 -- Example: Create a schema for the application
--- CREATE SCHEMA IF NOT EXISTS debt_tracker;
+-- CREATE SCHEMA IF NOT EXISTS pay_your_dues;
 
 -- Example: Create initial tables (uncomment and modify as needed)
 /*

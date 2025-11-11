@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 // UserRepository defines the interface for user data access operations

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Exit-Debt Test Runner Script
-# This script runs comprehensive tests for the exit-debt application
+# Pay Your Dues Test Runner Script
+# This script runs comprehensive tests for the pay-your-dues application
 
 set -e  # Exit on any error
 
-echo "🚀 Starting Exit-Debt Test Suite"
+echo "🚀 Starting Pay Your Dues Test Suite"
 echo "=================================="
 
 # Colors for output
@@ -183,7 +183,7 @@ main() {
             run_tests_with_coverage
             ;;
         "help"|"-h"|"--help")
-            echo "Exit-Debt Test Runner"
+            echo "Pay Your Dues Test Runner"
             echo ""
             echo "Usage: $0 [test_type]"
             echo ""

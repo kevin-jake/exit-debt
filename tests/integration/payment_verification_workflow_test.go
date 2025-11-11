@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/mocks"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/mocks"
+	"pay-your-dues/internal/services"
 )
 
 // TestPaymentVerificationWorkflow tests the complete payment verification workflow

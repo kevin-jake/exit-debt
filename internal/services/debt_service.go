@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
 )
 
 // debtService implements the DebtService interface

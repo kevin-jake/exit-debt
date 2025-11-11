@@ -1,4 +1,4 @@
-# Exit-Debt - a Go Debt Tracker Application
+# Pay Your Dues - a Go Debt Tracker Application
 
 A comprehensive debt tracking application built with Go, PostgreSQL, and Gin framework. Track your debts, money lent to others, and send notifications via email, SMS, or Facebook Messenger.
 
@@ -33,7 +33,7 @@ A comprehensive debt tracking application built with Go, PostgreSQL, and Gin fra
 
 ```bash
 git clone <repository-url>
-cd exit-debt
+cd pay-your-dues
 ```
 
 ### 2. Install dependencies
@@ -53,7 +53,7 @@ go install github.com/cosmtrek/air@latest
 Create a database for the application:
 
 ```sql
-CREATE DATABASE debt_tracker;
+CREATE DATABASE pay_your_dues;
 ```
 
 ### 5. Configure environment variables
@@ -71,7 +71,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=your_password
-DB_NAME=debt_tracker
+DB_NAME=pay_your_dues
 DB_SSL_MODE=disable
 
 SERVER_PORT=8080

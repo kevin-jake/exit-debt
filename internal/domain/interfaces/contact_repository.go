@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"exit-debt/internal/domain/entities"
+	"pay-your-dues/internal/domain/entities"
 )
 
 // ContactRepository defines the interface for contact data access operations

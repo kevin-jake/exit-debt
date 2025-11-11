@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/domain/interfaces"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/domain/interfaces"
 )
 
 // AuthMiddleware provides JWT authentication middleware

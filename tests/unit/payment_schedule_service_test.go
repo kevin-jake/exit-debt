@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"exit-debt/internal/domain/entities"
-	"exit-debt/internal/services"
+	"pay-your-dues/internal/domain/entities"
+	"pay-your-dues/internal/services"
 )
 
 func TestCalculatePaymentSchedule(t *testing.T) {
