@@ -139,7 +139,7 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 	// Step 3: User1 creates a debt where they owe money to User2
 	debtReq := &entities.CreateDebtListRequest{
 		ContactID:        contact.ID,
-		DebtType:         "i_owe",
+		DebtType:         "to_pay",
 		TotalAmount:      "1200.00",
 		Currency:         "USD",
 		InstallmentPlan:  "monthly",
@@ -150,7 +150,7 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 	debtList, err := suite.debtService.CreateDebtList(ctx, user1ID, debtReq)
 	suite.NoError(err)
 	suite.NotNil(debtList)
-	suite.Equal("i_owe", debtList.DebtType)
+	suite.Equal("to_pay", debtList.DebtType)
 	suite.Equal("1200.00", debtList.TotalAmount.StringFixed(2))
 	suite.Equal("400.00", debtList.InstallmentAmount.StringFixed(2))
 	suite.Equal(3, *debtList.NumberOfPayments)
@@ -169,7 +169,7 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 	suite.NoError(err)
 	suite.NotNil(payment)
 	suite.Equal("400.00", payment.Amount.StringFixed(2))
-	// For "i_owe" debts, payments are initially pending for verification
+	// For "to_pay" debts, payments are initially pending for verification
 	suite.Equal("pending", payment.Status)
 
 	// Step 5: Verify debt status update (pending payments don't count toward total yet)
@@ -194,7 +194,7 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 
 	debtReq2 := &entities.CreateDebtListRequest{
 		ContactID:   user1Contact[0].ID,
-		DebtType:    "owed_to_me",
+		DebtType:    "to_receive",
 		TotalAmount: "500.00",
 		Currency:    "USD",
 		DueDate:     timePtr(time.Now().AddDate(0, 1, 0)),
@@ -203,13 +203,13 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 
 	debtList2, err := suite.debtService.CreateDebtList(ctx, user2ID, debtReq2)
 	suite.NoError(err)
-	suite.Equal("owed_to_me", debtList2.DebtType)
+	suite.Equal("to_receive", debtList2.DebtType)
 	suite.Equal("500.00", debtList2.TotalAmount.StringFixed(2))
 
 	// Step 8: Verify both users can see their respective debts
 	user1Debts, err := suite.debtService.GetUserDebtLists(ctx, user1ID)
 	suite.NoError(err)
-	// User1 should see both: their own debt list (i_owe) and User2's debt list where they are the contact (owed_to_me)
+	// User1 should see both: their own debt list (to_pay) and User2's debt list where they are the contact to_receivee)
 	suite.Len(user1Debts, 2)
 	// Find the debt list owned by User1
 	var user1OwnedDebt *entities.DebtListResponse
@@ -220,11 +220,11 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 		}
 	}
 	suite.NotNil(user1OwnedDebt)
-	suite.Equal("i_owe", user1OwnedDebt.DebtType)
+	suite.Equal("to_pay", user1OwnedDebt.DebtType)
 
 	user2Debts, err := suite.debtService.GetUserDebtLists(ctx, user2ID)
 	suite.NoError(err)
-	// User2 should see both: their own debt list (owed_to_me) and User1's debt list where they are the contact (i_owe)
+	// User2 should see both: their own debt list (to_receive) and User1's debt list where they are the contact (to_pay)
 	suite.Len(user2Debts, 2)
 	// Find the debt list owned by User2
 	var user2OwnedDebt *entities.DebtListResponse
@@ -235,14 +235,14 @@ func (suite *UserContactDebtWorkflowTestSuite) TestCompleteUserContactDebtWorkfl
 		}
 	}
 	suite.NotNil(user2OwnedDebt)
-	suite.Equal("owed_to_me", user2OwnedDebt.DebtType)
+	suite.Equal("to_receive", user2OwnedDebt.DebtType)
 
 	// Step 9: Test authorization - User1 can access User2's debt since they are a contact in it
 	debtList2ForUser1, err := suite.debtService.GetDebtList(ctx, debtList2.ID, user1ID)
 	suite.NoError(err)
 	suite.Equal(debtList2.ID, debtList2ForUser1.ID)
 	// The debt type should be flipped to User1's perspective (they owe money)
-	suite.Equal("i_owe", debtList2ForUser1.DebtType)
+	suite.Equal("to_pay", debtList2ForUser1.DebtType)
 	// User1 should see the contact information (User2's info)
 	suite.Equal(user2ID, debtList2ForUser1.Contact.ID)
 
@@ -396,10 +396,10 @@ func (suite *UserContactDebtWorkflowTestSuite) TestDebtPerspectives() {
 	contactB, err := suite.contactService.CreateContact(ctx, userAID, contactReq)
 	suite.NoError(err)
 
-	// User A creates debt: "owed_to_me" (User B owes User A)
+	// User A creates debt: "to_receive" (User B owes User A)
 	debtReq := &entities.CreateDebtListRequest{
 		ContactID:   contactB.ID,
-		DebtType:    "owed_to_me",
+		DebtType:    "to_receive",
 		TotalAmount: "400.00",
 		Currency:    "USD",
 		DueDate:     timePtr(time.Now().AddDate(0, 1, 0)),
@@ -408,13 +408,13 @@ func (suite *UserContactDebtWorkflowTestSuite) TestDebtPerspectives() {
 
 	debtList, err := suite.debtService.CreateDebtList(ctx, userAID, debtReq)
 	suite.NoError(err)
-	suite.Equal("owed_to_me", debtList.DebtType)
+	suite.Equal("to_receive", debtList.DebtType)
 
 	// Verify User A's perspective
 	userADebts, err := suite.debtService.GetUserDebtLists(ctx, userAID)
 	suite.NoError(err)
 	suite.Len(userADebts, 1)
-	suite.Equal("owed_to_me", userADebts[0].DebtType)
+	suite.Equal("to_receive", userADebts[0].DebtType)
 	suite.Equal("User B", userADebts[0].Contact.Name)
 
 	// User B should see the debt list created by User A (with flipped debt type)
@@ -423,7 +423,7 @@ func (suite *UserContactDebtWorkflowTestSuite) TestDebtPerspectives() {
 	suite.NoError(err)
 	suite.Len(userBDebts, 1) // User B sees User A's debt list
 	// The debt type should be flipped from User A's perspective
-	suite.Equal("i_owe", userBDebts[0].DebtType) // User B owes User A
+	suite.Equal("to_pay", userBDebts[0].DebtType) // User B owes User A
 	suite.Equal("User A", userBDebts[0].Contact.Name)
 }
 

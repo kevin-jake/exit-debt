@@ -116,7 +116,7 @@ export const DeleteContactModal = ({ contact, onConfirm, onClose }) => {
                   >
                     <div className="flex-1">
                       <div className="font-medium text-foreground">
-                        {debt.debt_type === 'owed_to_me' ? '↓ Owed to me' : '↑ I owe'}
+                        {debt.debt_type === 'to_receive' ? '↓ To Receive' : '↑ To Pay'}
                       </div>
                       {debt.description && (
                         <div className="mt-1 line-clamp-1 text-xs text-muted-foreground">

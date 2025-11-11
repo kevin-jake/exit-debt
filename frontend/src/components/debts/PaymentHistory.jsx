@@ -276,7 +276,7 @@ export const PaymentHistory = ({
                       )}
                     </div>
 
-                    {debtType === 'owed_to_me' && (
+                    {debtType === 'to_receive' && (
                       <div className="flex items-center gap-2">
                         {payment.status === 'pending' && (
                           <>
@@ -443,7 +443,7 @@ export const PaymentHistory = ({
                   <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">
                     Receipt
                   </th>
-                  {debtType === 'owed_to_me' && (
+                  {debtType === 'to_receive' && (
                     <th className="px-4 py-3 text-center text-xs font-medium text-muted-foreground">
                       Actions
                     </th>
@@ -504,7 +504,7 @@ export const PaymentHistory = ({
                           <span className="text-muted-foreground/50">—</span>
                         )}
                       </td>
-                      {debtType === 'owed_to_me' && (
+                      {debtType === 'to_receive' && (
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             {payment.status === 'pending' && (

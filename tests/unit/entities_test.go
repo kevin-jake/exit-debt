@@ -243,7 +243,7 @@ func TestDebtList_IsValid(t *testing.T) {
 				ID:            uuid.New(),
 				UserID:        uuid.New(),
 				ContactID:     uuid.New(),
-				DebtType:      "i_owe",
+				DebtType:      "to_pay",
 				TotalAmount:   decimal.RequireFromString("1000.00"),
 				Currency:      "USD",
 				Status:        "active",
@@ -258,7 +258,7 @@ func TestDebtList_IsValid(t *testing.T) {
 			debtList: &entities.DebtList{
 				UserID:      uuid.Nil,
 				ContactID:   uuid.New(),
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: decimal.RequireFromString("1000.00"),
 				Currency:    "USD",
 			},
@@ -270,7 +270,7 @@ func TestDebtList_IsValid(t *testing.T) {
 			debtList: &entities.DebtList{
 				UserID:      uuid.New(),
 				ContactID:   uuid.Nil,
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: decimal.RequireFromString("1000.00"),
 				Currency:    "USD",
 			},
@@ -294,7 +294,7 @@ func TestDebtList_IsValid(t *testing.T) {
 			debtList: &entities.DebtList{
 				UserID:      uuid.New(),
 				ContactID:   uuid.New(),
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: decimal.RequireFromString("-100.00"),
 				Currency:    "USD",
 			},
@@ -306,7 +306,7 @@ func TestDebtList_IsValid(t *testing.T) {
 			debtList: &entities.DebtList{
 				UserID:      uuid.New(),
 				ContactID:   uuid.New(),
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: decimal.RequireFromString("1000.00"),
 				Currency:    "",
 			},

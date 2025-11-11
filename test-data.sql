@@ -37,7 +37,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         500.00, 50.00, 150.00, 350.00, 'Php', 'overdue',
         v_due_date, v_next_payment_date,
         'weekly', 10,
@@ -79,7 +79,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'owed_to_me',
+        v_debt_id, v_user_id, v_contact_id, 'to_receive',
         1200.00, 100.00, 300.00, 900.00, 'Php', 'active',
         v_due_date, v_next_payment_date,
         'monthly', 12,
@@ -119,7 +119,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         800.00, 100.00, 200.00, 600.00, 'Php', 'overdue',
         v_due_date, v_next_payment_date,
         'biweekly', 8,
@@ -159,7 +159,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'owed_to_me',
+        v_debt_id, v_user_id, v_contact_id, 'to_receive',
         2000.00, 500.00, 500.00, 1500.00, 'Php', 'active',
         v_due_date, v_next_payment_date,
         'quarterly', 4,
@@ -195,7 +195,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         5000.00, 5000.00, 0.00, 5000.00, 'Php', 'overdue',
         v_due_date, v_next_payment_date,
         'onetime', 1,
@@ -218,7 +218,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         10000.00, 2000.00, 4000.00, 6000.00, 'Php', 'active',
         v_due_date, v_next_payment_date,
         'yearly', 5,
@@ -257,7 +257,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'owed_to_me',
+        v_debt_id, v_user_id, v_contact_id, 'to_receive',
         1000.00, 200.00, 550.00, 450.00, 'Php', 'overdue',
         v_due_date, v_next_payment_date,
         'monthly', 5,
@@ -297,7 +297,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         400.00, 50.00, 350.00, 50.00, 'Php', 'active',
         v_due_date, v_next_payment_date,
         'weekly', 8,
@@ -336,7 +336,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'i_owe',
+        v_debt_id, v_user_id, v_contact_id, 'to_pay',
         300.00, 100.00, 300.00, 0.00, 'Php', 'settled',
         v_due_date, v_next_payment_date,
         'monthly', 3,
@@ -376,7 +376,7 @@ BEGIN
         due_date, next_payment_date, installment_plan, number_of_payments,
         description, notes, created_at, updated_at
     ) VALUES (
-        v_debt_id, v_user_id, v_contact_id, 'owed_to_me',
+        v_debt_id, v_user_id, v_contact_id, 'to_receive',
         1000.00, 1000.00, 0.00, 1000.00, 'Php', 'settled',
         v_due_date, v_next_payment_date,
         'onetime', 1,

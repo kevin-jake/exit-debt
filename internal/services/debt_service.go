@@ -184,10 +184,10 @@ func (s *debtService) GetDebtList(ctx context.Context, id uuid.UUID, userID uuid
 			// Flip the debt type for the user's perspective
 			// When a user views a debt list where they are the contact,
 			// the debt type should be from their perspective
-			if contactDebtList.DebtType == "owed_to_me" {
-				contactDebtList.DebtType = "i_owe"
-			} else if contactDebtList.DebtType == "i_owe" {
-				contactDebtList.DebtType = "owed_to_me"
+			if contactDebtList.DebtType == "to_receive" {
+				contactDebtList.DebtType = "to_pay"
+			} else if contactDebtList.DebtType == "to_pay" {
+				contactDebtList.DebtType = "to_receive"
 			}
 			return &contactDebtList, nil
 		}
@@ -212,10 +212,10 @@ func (s *debtService) GetUserDebtLists(ctx context.Context, userID uuid.UUID) ([
 
 	// Flip the debt type for debt lists where the user is the contact
 	for i := range contactDebtLists {
-		if contactDebtLists[i].DebtType == "owed_to_me" {
-			contactDebtLists[i].DebtType = "i_owe"
-		} else if contactDebtLists[i].DebtType == "i_owe" {
-			contactDebtLists[i].DebtType = "owed_to_me"
+		if contactDebtLists[i].DebtType == "to_receive" {
+			contactDebtLists[i].DebtType = "to_pay"
+		} else if contactDebtLists[i].DebtType == "to_pay" {
+			contactDebtLists[i].DebtType = "to_receive"
 		}
 	}
 
@@ -439,20 +439,20 @@ func (s *debtService) CreateDebtItem(ctx context.Context, userID uuid.UUID, req 
 
 	// Determine initial status based on the user's perspective
 	// When a user creates a payment, we need to consider their perspective:
-	// - If they owe money (i_owe from their perspective), payments are pending until verified
-	// - If they are owed money (owed_to_me from their perspective), payments are completed
+	// - If they owe money (to_pay from their perspective), payments are pending until verified
+	// - If they are owed money (to_receive from their perspective), payments are completed
 	initialStatus := "completed"
 	
 	// Check if the user is the owner or a contact to determine their perspective
 	if belongs {
 		// User owns the debt list, use the debt list's debt type
-		if debtList.DebtType == "i_owe" {
+		if debtList.DebtType == "to_pay" {
 			initialStatus = "pending"
 		}
 	} else {
 		// User is a contact, determine their perspective by flipping the debt type
-		// If the debt list is "owed_to_me" (someone owes them), then from the contact's perspective it's "i_owe"
-		if debtList.DebtType == "owed_to_me" {
+		// If the debt list is "to_receive" (someone owes them), then from the contact's perspective it's "to_pay"
+		if debtList.DebtType == "to_receive" {
 			initialStatus = "pending"
 		}
 	}
@@ -508,7 +508,7 @@ func (s *debtService) GetDebtItem(ctx context.Context, id uuid.UUID, userID uuid
 }
 
 // GetDebtItemForVerification gets a debt item for verification purposes
-// Only allows verification if the user is the one who should verify (debt_type = "owed_to_me")
+// Only allows verification if the user is the one who should verify (debt_type = "to_receive")
 func (s *debtService) GetDebtItemForVerification(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*entities.DebtItem, error) {
 	// Check if user can verify this debt item
 	canVerify, err := s.debtItemRepo.CanUserVerifyDebtItem(ctx, id, userID)
@@ -1055,7 +1055,7 @@ func (s *debtService) validateCreateDebtListRequest(req *entities.CreateDebtList
 	if req.ContactID == uuid.Nil {
 		return entities.ErrInvalidInput
 	}
-	if req.DebtType != "owed_to_me" && req.DebtType != "i_owe" {
+	if req.DebtType != "to_receive" && req.DebtType != "to_pay" {
 		return entities.ErrInvalidDebtType
 	}
 	if req.TotalAmount == "" {

@@ -34,7 +34,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			userID: userID,
 			request: &entities.CreateDebtListRequest{
 				ContactID:   contactID,
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: "1000.00",
 				Currency:    "USD",
 				DueDate:     &futureDate,
@@ -56,7 +56,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			validateResult: func(t *testing.T, debtList *entities.DebtList) {
 				assert.Equal(t, userID, debtList.UserID)
 				assert.Equal(t, contactID, debtList.ContactID)
-				assert.Equal(t, "i_owe", debtList.DebtType)
+				assert.Equal(t, "to_pay", debtList.DebtType)
 				assert.Equal(t, "1000", debtList.TotalAmount.String())
 				assert.Equal(t, "1000", debtList.InstallmentAmount.String())
 				assert.Equal(t, "active", debtList.Status)
@@ -68,7 +68,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			userID: userID,
 			request: &entities.CreateDebtListRequest{
 				ContactID:        contactID,
-				DebtType:         "owed_to_me",
+				DebtType:         "to_receive",
 				TotalAmount:      "2400.00",
 				Currency:         "USD",
 				InstallmentPlan:  "monthly",
@@ -91,7 +91,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			expectedError: nil,
 			expectSuccess: true,
 			validateResult: func(t *testing.T, debtList *entities.DebtList) {
-				assert.Equal(t, "owed_to_me", debtList.DebtType)
+				assert.Equal(t, "to_receive", debtList.DebtType)
 				assert.Equal(t, "2400", debtList.TotalAmount.String())
 				assert.Equal(t, "200", debtList.InstallmentAmount.String())
 				assert.Equal(t, 12, *debtList.NumberOfPayments)
@@ -116,7 +116,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			userID: userID,
 			request: &entities.CreateDebtListRequest{
 				ContactID:   contactID,
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: "-100.00",
 				DueDate:     &futureDate,
 			},
@@ -136,7 +136,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			userID: userID,
 			request: &entities.CreateDebtListRequest{
 				ContactID:   contactID,
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: "500.00",
 				DueDate:     timePtr(time.Now().AddDate(0, 0, -1)),
 			},
@@ -157,7 +157,7 @@ func TestDebtService_CreateDebtList(t *testing.T) {
 			userID: userID,
 			request: &entities.CreateDebtListRequest{
 				ContactID:   uuid.New(),
-				DebtType:    "i_owe",
+				DebtType:    "to_pay",
 				TotalAmount: "500.00",
 				DueDate:     &futureDate,
 			},
@@ -336,7 +336,7 @@ func TestDebtService_CreateDebtItem(t *testing.T) {
 				contactDebtList := entities.DebtListResponse{
 					ID:       debtListID,
 					UserID:   uuid.New(), // Different user owns it
-					DebtType: "owed_to_me", // From the owner's perspective
+					DebtType: "to_receive", // From the owner's perspective
 				}
 				debtListRepo.On("GetDebtListsWhereUserIsContact", mock.Anything, userID).Return([]entities.DebtListResponse{contactDebtList}, nil)
 				
@@ -345,7 +345,7 @@ func TestDebtService_CreateDebtItem(t *testing.T) {
 					ID:              debtListID,
 					UserID:          uuid.New(), // Different user owns it
 					Currency:        "EUR",
-					DebtType:        "owed_to_me", // From the owner's perspective
+					DebtType:        "to_receive", // From the owner's perspective
 					TotalAmount:     decimal.RequireFromString("500.00"),
 					NextPaymentDate: time.Now().AddDate(0, 1, 0),
 					CreatedAt:       time.Now(),
@@ -370,8 +370,8 @@ func TestDebtService_CreateDebtItem(t *testing.T) {
 				assert.Equal(t, "150", debtItem.Amount.String())
 				assert.Equal(t, "EUR", debtItem.Currency)
 				assert.Equal(t, "cash", debtItem.PaymentMethod)
-				// Since the user is a contact in an "owed_to_me" debt list, 
-				// from their perspective it's "i_owe", so status should be "pending"
+				// Since the user is a contact in an "to_receive" debt list, 
+				// from their perspective it's "to_pay", so status should be "pending"
 				assert.Equal(t, "pending", debtItem.Status)
 			},
 		},
@@ -435,7 +435,7 @@ func TestDebtService_GetOverdueItems(t *testing.T) {
 					{
 						ID:              uuid.New(),
 						UserID:          userID,
-						DebtType:        "i_owe",
+						DebtType:        "to_pay",
 						TotalAmount:     decimal.RequireFromString("500.00"),
 						NextPaymentDate: time.Now().AddDate(0, 0, -5),
 						Status:          "overdue",
@@ -443,7 +443,7 @@ func TestDebtService_GetOverdueItems(t *testing.T) {
 					{
 						ID:              uuid.New(),
 						UserID:          userID,
-						DebtType:        "owed_to_me",
+						DebtType:        "to_receive",
 						TotalAmount:     decimal.RequireFromString("300.00"),
 						NextPaymentDate: time.Now().AddDate(0, 0, -10),
 						Status:          "overdue",

@@ -192,12 +192,12 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
             <div className="flex items-center justify-between">
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-                  debt.debt_type === 'i_owe'
+                  debt.debt_type === 'to_pay'
                     ? 'bg-destructive/10 text-destructive'
                     : 'bg-success/10 text-success'
                 }`}
               >
-                {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                {debt.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
               </span>
               <div className="text-sm text-muted-foreground">
                 {(() => {
@@ -220,7 +220,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                   <div className="mb-2 text-sm text-muted-foreground">Total Amount</div>
                   <div
                     className={`text-2xl font-bold ${
-                      debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                      debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'
                     }`}
                   >
                     {formatCurrency(parseFloat(debt.total_amount || 0))}
@@ -235,7 +235,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                   <div
                     className={`text-2xl font-bold ${
                       remainingBalance > 0
-                        ? debt.debt_type === 'i_owe'
+                        ? debt.debt_type === 'to_pay'
                           ? 'text-destructive'
                           : 'text-success'
                         : 'text-muted-foreground'
@@ -378,7 +378,7 @@ export const DebtDetailsModal = ({ debt, onClose, onEdit, onDelete }) => {
                         <div className="text-sm text-muted-foreground">Amount Due</div>
                         <div
                           className={`text-xl font-bold ${
-                            debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                            debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'
                           }`}
                         >
                           {formatCurrency(parseFloat(nextPaymentInfo.amount || 0))}

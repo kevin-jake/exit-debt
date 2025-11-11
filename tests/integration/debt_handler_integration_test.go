@@ -39,7 +39,7 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 			name: "successful debt list creation",
 			requestBody: map[string]interface{}{
 				"contact_id":     contactID.String(),
-				"debt_type":      "i_owe",
+				"debt_type":      "to_pay",
 				"total_amount":   "1000.00",
 				"currency":       "USD",
 				"due_date":       futureDate.Format(time.RFC3339),
@@ -51,7 +51,7 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 					ID:                uuid.New(),
 					UserID:            userID,
 					ContactID:         contactID,
-					DebtType:          "i_owe",
+					DebtType:          "to_pay",
 					TotalAmount:       decimal.RequireFromString("1000.00"),
 					InstallmentAmount: decimal.RequireFromString("1000.00"),
 					Currency:          "USD",
@@ -70,7 +70,7 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 				assert.Equal(t, "Debt list created successfully", body["message"])
 				assert.NotNil(t, body["data"])
 				debtData := body["data"].(map[string]interface{})
-				assert.Equal(t, "i_owe", debtData["DebtType"])
+				assert.Equal(t, "to_pay", debtData["DebtType"])
 				assert.Equal(t, "1000", debtData["TotalAmount"])
 			},
 		},
@@ -78,7 +78,7 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 			name: "unauthorized user",
 			requestBody: map[string]interface{}{
 				"contact_id":   contactID.String(),
-				"debt_type":    "i_owe",
+				"debt_type":    "to_pay",
 				"total_amount": "500.00",
 			},
 			setupMock: func(mockDebtService *mocks.MockDebtService) {
@@ -114,7 +114,7 @@ func TestDebtHandler_CreateDebtList(t *testing.T) {
 			name: "contact not found",
 			requestBody: map[string]interface{}{
 				"contact_id":   uuid.New().String(),
-				"debt_type":    "i_owe",
+				"debt_type":    "to_pay",
 				"total_amount": "500.00",
 			},
 			setupMock: func(mockDebtService *mocks.MockDebtService) {
@@ -190,7 +190,7 @@ func TestDebtHandler_GetUserDebtLists(t *testing.T) {
 					{
 						ID:            uuid.New(),
 						UserID:        userID,
-						DebtType:      "i_owe",
+						DebtType:      "to_pay",
 						TotalAmount:   decimal.RequireFromString("1000.00"),
 						Currency:      "USD",
 						Status:        "active",
@@ -198,7 +198,7 @@ func TestDebtHandler_GetUserDebtLists(t *testing.T) {
 					{
 						ID:            uuid.New(),
 						UserID:        userID,
-						DebtType:      "owed_to_me",
+						DebtType:      "to_receive",
 						TotalAmount:   decimal.RequireFromString("500.00"),
 						Currency:      "USD",
 						Status:        "active",

@@ -26,7 +26,7 @@ export const DebtsTable = () => {
 
   // Filter and search state
   const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all') // all, i_owe, owed_to_me
+  const [typeFilter, setTypeFilter] = useState('all') // all, to_pay, to_receive
   const [sortBy, setSortBy] = useState('updated_at')
   const [sortOrder, setSortOrder] = useState('desc')
 
@@ -185,24 +185,24 @@ export const DebtsTable = () => {
             All
           </button>
           <button
-            onClick={() => setTypeFilter('i_owe')}
+            onClick={() => setTypeFilter('to_pay')}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              typeFilter === 'i_owe'
+              typeFilter === 'to_pay'
                 ? 'bg-destructive text-destructive-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
           >
-            I Owe
+            To Pay
           </button>
           <button
-            onClick={() => setTypeFilter('owed_to_me')}
+            onClick={() => setTypeFilter('to_receive')}
             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-              typeFilter === 'owed_to_me'
+              typeFilter === 'to_receive'
                 ? 'bg-success text-success-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
             }`}
           >
-            Owed to Me
+            To Receive
           </button>
         </div>
       </div>
@@ -287,7 +287,7 @@ export const DebtsTable = () => {
                       <td className="whitespace-nowrap px-6 py-4">
                         <span
                           className={`text-sm font-semibold ${
-                            debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                            debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'
                           }`}
                         >
                           {formatCurrency(parseFloat(debt.total_amount || 0))}
@@ -296,12 +296,12 @@ export const DebtsTable = () => {
                       <td className="whitespace-nowrap px-6 py-4">
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                            debt.debt_type === 'i_owe'
+                            debt.debt_type === 'to_pay'
                               ? 'bg-destructive/10 text-destructive'
                               : 'bg-success/10 text-success'
                           }`}
                         >
-                          {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                          {debt.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
@@ -455,12 +455,12 @@ export const DebtsTable = () => {
                         <div className="flex flex-wrap gap-1">
                           <span
                             className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                              debt.debt_type === 'i_owe'
+                              debt.debt_type === 'to_pay'
                                 ? 'bg-destructive/10 text-destructive'
                                 : 'bg-success/10 text-success'
                             }`}
                           >
-                            {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                            {debt.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
                           </span>
                         </div>
                       </div>
@@ -482,7 +482,7 @@ export const DebtsTable = () => {
                   <div className="flex items-center justify-between">
                     <span
                       className={`text-lg font-semibold ${
-                        debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                        debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'
                       }`}
                     >
                       {formatCurrency(parseFloat(debt.total_amount || 0))}

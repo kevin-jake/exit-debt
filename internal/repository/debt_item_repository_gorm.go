@@ -142,15 +142,15 @@ func (r *debtItemRepositoryGORM) BelongsToUserDebtList(ctx context.Context, debt
 
 // CanUserVerifyDebtItem checks if a user can verify a debt item based on debt type
 // User can verify if:
-// 1. debt_type = "owed_to_me" AND user is the owner (user_id)
-// 2. debt_type = "i_owe" AND user is the contact (contact.user_id_ref = user_id)
+// 1. debt_type = "to_receive" AND user is the owner (user_id)
+// 2. debt_type = "to_pay" AND user is the contact (contact.user_id_ref = user_id)
 func (r *debtItemRepositoryGORM) CanUserVerifyDebtItem(ctx context.Context, debtItemID, userID uuid.UUID) (bool, error) {
 	var count int64
 	if err := r.db.WithContext(ctx).Model(&models.DebtItem{}).
 		Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
 		Joins("LEFT JOIN contacts ON debt_lists.contact_id = contacts.id").
 		Where("debt_items.id = ? AND ((debt_lists.debt_type = ? AND debt_lists.user_id = ?) OR (debt_lists.debt_type = ? AND contacts.user_id_ref = ?))", 
-			debtItemID, "owed_to_me", userID, "i_owe", userID).
+			debtItemID, "to_receive", userID, "to_pay", userID).
 		Count(&count).Error; err != nil {
 		return false, fmt.Errorf("failed to check debt item verification permission: %w", err)
 	}
@@ -163,7 +163,7 @@ func (r *debtItemRepositoryGORM) GetPendingVerifications(ctx context.Context, us
 	if err := r.db.WithContext(ctx).
 		Joins("JOIN debt_lists ON debt_items.debt_list_id = debt_lists.id").
 		Joins("LEFT JOIN contacts ON debt_lists.contact_id = contacts.id").
-		Where("((debt_lists.user_id = ? AND debt_lists.debt_type = ?) OR (contacts.user_id_ref = ? AND debt_lists.debt_type = ?)) AND debt_items.status = ?", userID, "owed_to_me", userID, "i_owe", "pending").
+		Where("((debt_lists.user_id = ? AND debt_lists.debt_type = ?) OR (contacts.user_id_ref = ? AND debt_lists.debt_type = ?)) AND debt_items.status = ?", userID, "to_receive", userID, "to_pay", "pending").
 		Order("debt_items.created_at DESC").
 		Find(&gormDebtItems).Error; err != nil {
 		return nil, fmt.Errorf("failed to get pending verifications: %w", err)

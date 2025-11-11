@@ -113,37 +113,43 @@ frontend/
 ## Features
 
 ### Authentication
+
 - User registration and login
 - JWT-based authentication
 - Protected routes
 - Automatic token management
 
 ### Contact Management
+
 - Create, read, update, and delete contacts
 - Search and filter contacts
 - Contact details modal
 - Pagination support
 
 ### Debt Tracking
-- Track debts (I Owe / Owed to Me)
+
+- Track debts (To Pay / To Receive)
 - Add payments to debts
 - Track payment history
 - Due date tracking with reminders
 - Debt details with calculations
 
 ### Dashboard
+
 - Overview of total debts
 - Recent debts
 - Upcoming due dates
 - Quick actions
 
 ### Settings
+
 - Theme selection (Light/Dark/System)
 - Currency preferences
 - Language settings
 - Notification preferences
 
 ### UI/UX
+
 - Responsive design (mobile, tablet, desktop)
 - Dark mode support
 - Toast notifications
@@ -168,12 +174,14 @@ The frontend communicates with the backend API using a centralized API client (`
 ### API Base URL
 
 Configure the API URL in your environment file:
+
 - Development: `http://localhost:8080/api/v1`
 - Production: Set via `VITE_API_URL` environment variable
 
 ### Authentication
 
 All authenticated requests include the JWT token in the `Authorization` header:
+
 ```
 Authorization: Bearer <token>
 ```
@@ -191,13 +199,14 @@ The app uses Zustand for state management. Stores are organized by domain:
 - `themeStore` - Theme (dark/light mode)
 
 Example usage:
+
 ```javascript
 import { useAuthStore } from '@stores/authStore'
 
 function MyComponent() {
   const user = useAuthStore((state) => state.user)
   const login = useAuthStore((state) => state.login)
-  
+
   // Use user and login...
 }
 ```
@@ -222,6 +231,7 @@ The app uses TailwindCSS for styling with custom theme variables defined in `src
 ### Custom CSS Classes
 
 Common utility classes:
+
 - `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-destructive` - Button styles
 - `.card` - Card container
 - `.input` - Input field
@@ -230,6 +240,7 @@ Common utility classes:
 ### Theme
 
 Colors are defined using CSS variables that support both light and dark modes:
+
 - `--background`, `--foreground` - Main background and text
 - `--primary`, `--secondary` - Primary and secondary colors
 - `--destructive`, `--success`, `--warning` - Status colors

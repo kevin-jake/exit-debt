@@ -24,7 +24,7 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
   } = useForm({
     defaultValues: {
       contact_id: '',
-      debt_type: 'i_owe',
+      debt_type: 'to_pay',
       payment_type: 'onetime',
       total_amount: '',
       description: '',
@@ -152,8 +152,8 @@ export const CreateDebtModal = ({ onDebtCreated, onClose }) => {
                 className="input"
                 disabled={isSubmitting}
               >
-                <option value="i_owe">I Owe</option>
-                <option value="owed_to_me">Owed to Me</option>
+                <option value="to_pay">To Pay</option>
+                <option value="to_receive">To Receive</option>
               </select>
               {errors.debt_type && (
                 <p className="mt-1 text-sm text-destructive">{errors.debt_type.message}</p>

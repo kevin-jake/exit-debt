@@ -29,7 +29,7 @@ type DebtList struct {
 	ID              uuid.UUID     `json:"id" gorm:"type:uuid;primary_key"`
 	UserID          uuid.UUID     `json:"user_id" gorm:"type:uuid;not null;index"`
 	ContactID       uuid.UUID     `json:"contact_id" gorm:"type:uuid;not null;index"`
-	DebtType        string        `json:"debt_type" gorm:"not null;index;check:debt_type IN ('owed_to_me', 'i_owe')"`
+	DebtType        string        `json:"debt_type" gorm:"not null;index;check:debt_type IN ('to_receive', 'to_pay')"`
 	TotalAmount     decimal.Decimal `json:"total_amount" gorm:"type:decimal(15,2);not null"`
 	InstallmentAmount decimal.Decimal `json:"installment_amount" gorm:"type:decimal(15,2);not null"`
 	TotalPaymentsMade decimal.Decimal `json:"total_payments_made" gorm:"type:decimal(15,2);default:0"`
@@ -53,7 +53,7 @@ type DebtList struct {
 
 type CreateDebtListRequest struct {
 	ContactID         uuid.UUID `json:"contact_id" binding:"required"`
-	DebtType          string    `json:"debt_type" binding:"required,oneof=owed_to_me i_owe"`
+	DebtType          string    `json:"debt_type" binding:"required,oneof=to_receive to_pay"`
 	TotalAmount       string    `json:"total_amount" binding:"required"`
 	Currency          string    `json:"currency"`
 	DueDate           *time.Time `json:"due_date"`

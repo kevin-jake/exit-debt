@@ -56,7 +56,7 @@ func TestPaymentVerificationWorkflow(t *testing.T) {
 			ID:                debtListID,
 			UserID:            creditorID, // Creditor owns the debt list
 			ContactID:         debtorID,   // Debtor is the contact
-			DebtType:          "owed_to_me", // From creditor's perspective
+			DebtType:          "to_receive", // From creditor's perspective
 			TotalAmount:       decimal.RequireFromString("1000.00"),
 			InstallmentAmount: decimal.RequireFromString("250.00"),
 			Currency:          "USD",
@@ -86,7 +86,7 @@ func TestPaymentVerificationWorkflow(t *testing.T) {
 				{
 					ID:       debtListID,
 					UserID:   creditorID,
-					DebtType: "owed_to_me",
+					DebtType: "to_receive",
 				},
 			}, nil).Once()
 			mockDebtListRepo.On("GetByID", ctx, debtListID).Return(debtList, nil).Twice() // Called once for validation, once for update
@@ -261,7 +261,7 @@ func TestPaymentVerificationWorkflow(t *testing.T) {
 			ID:                debtListID,
 			UserID:            creditorID,
 			ContactID:         debtorID,
-			DebtType:          "owed_to_me",
+			DebtType:          "to_receive",
 			TotalAmount:       decimal.RequireFromString("1000.00"),
 			InstallmentAmount: decimal.RequireFromString("250.00"),
 			Currency:          "USD",

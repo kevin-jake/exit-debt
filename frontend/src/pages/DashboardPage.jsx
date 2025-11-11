@@ -67,11 +67,11 @@ export const DashboardPage = () => {
 
   // Calculate totals
   const totalIOwe = debts
-    .filter((debt) => debt.debt_type === 'i_owe')
+    .filter((debt) => debt.debt_type === 'to_pay')
     .reduce((sum, debt) => sum + parseFloat(debt.total_amount || 0), 0)
 
   const totalOwedToMe = debts
-    .filter((debt) => debt.debt_type === 'owed_to_me')
+    .filter((debt) => debt.debt_type === 'to_receive')
     .reduce((sum, debt) => sum + parseFloat(debt.total_amount || 0), 0)
 
   // Get recent debts (last 6)
@@ -107,7 +107,7 @@ export const DashboardPage = () => {
       {/* Quick Overview Section */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <StatCard
-          title="Total Amount I Owe"
+          title="Total Amount To Pay"
           value={formatCurrency(totalIOwe)}
           valueColor="text-destructive"
           iconBgColor="bg-destructive/10"
@@ -125,7 +125,7 @@ export const DashboardPage = () => {
         />
 
         <StatCard
-          title="Total Amount Owed to Me"
+          title="Total Amount To Receive"
           value={formatCurrency(totalOwedToMe)}
           valueColor="text-success"
           iconBgColor="bg-success/10"
@@ -193,14 +193,14 @@ export const DashboardPage = () => {
                             {payment.contact_name || 'Unknown Contact'}
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {payment.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                            {payment.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right">
                         <p
-                          className={`font-semibold ${payment.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                          className={`font-semibold ${payment.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'}`}
                         >
                           {formatCurrency(parseFloat(payment.amount || 0))}
                         </p>
@@ -241,14 +241,14 @@ export const DashboardPage = () => {
                             {payment.contact_name || 'Unknown Contact'}
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {payment.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                            {payment.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right">
                         <p
-                          className={`font-semibold ${payment.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                          className={`font-semibold ${payment.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'}`}
                         >
                           {formatCurrency(parseFloat(payment.amount || 0))}
                         </p>
@@ -387,7 +387,7 @@ export const DashboardPage = () => {
                         {debt.contact?.name || 'Unknown Contact'}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        {debt.debt_type === 'i_owe' ? 'I Owe' : 'Owed to Me'}
+                        {debt.debt_type === 'to_pay' ? 'To Pay' : 'To Receive'}
                       </p>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export const DashboardPage = () => {
 
                 <div className="flex items-center justify-between">
                   <p
-                    className={`font-semibold ${debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'}`}
+                    className={`font-semibold ${debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'}`}
                   >
                     {formatCurrency(parseFloat(debt.total_amount || 0))}
                   </p>

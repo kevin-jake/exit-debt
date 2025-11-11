@@ -59,7 +59,7 @@ type DebtItem struct {
 // CreateDebtListRequest represents a request to create a new debt list
 type CreateDebtListRequest struct {
 	ContactID        uuid.UUID  `json:"contact_id" validate:"required"`
-	DebtType         string     `json:"debt_type" validate:"required,oneof=owed_to_me i_owe"`
+	DebtType         string     `json:"debt_type" validate:"required,oneof=to_receive to_pay"`
 	TotalAmount      string     `json:"total_amount" validate:"required"`
 	Currency         string     `json:"currency"`
 	DueDate          *time.Time `json:"due_date"`
@@ -186,7 +186,7 @@ func (d *DebtList) IsValid() error {
 	if d.ContactID == uuid.Nil {
 		return ErrInvalidInput
 	}
-	if d.DebtType != "owed_to_me" && d.DebtType != "i_owe" {
+	if d.DebtType != "to_receive" && d.DebtType != "to_pay" {
 		return ErrInvalidDebtType
 	}
 	if d.TotalAmount.LessThanOrEqual(decimal.Zero) {

@@ -35,7 +35,7 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
     reset,
   } = useForm({
     defaultValues: {
-      debt_type: debt.debt_type || 'i_owe',
+      debt_type: debt.debt_type || 'to_pay',
       payment_type: getPaymentType(debt),
       total_amount: debt.total_amount || '',
       description: debt.description || '',
@@ -60,7 +60,7 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
     })
 
     reset({
-      debt_type: debt.debt_type || 'i_owe',
+      debt_type: debt.debt_type || 'to_pay',
       payment_type: paymentType,
       total_amount: debt.total_amount || '',
       description: debt.description || '',
@@ -168,8 +168,8 @@ export const EditDebtModal = ({ debt, onClose, onDebtUpdated }) => {
                 className="input"
                 disabled={isSubmitting}
               >
-                <option value="i_owe">I Owe</option>
-                <option value="owed_to_me">Owed to Me</option>
+                <option value="to_pay">To Pay</option>
+                <option value="to_receive">To Receive</option>
               </select>
               {errors.debt_type && (
                 <p className="mt-1 text-sm text-destructive">{errors.debt_type.message}</p>

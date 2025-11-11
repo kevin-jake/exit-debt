@@ -93,7 +93,7 @@ export const DeleteDebtModal = ({ debt, onConfirm, onClose }) => {
                 <span className="text-sm text-muted-foreground">Amount:</span>
                 <span
                   className={`font-semibold ${
-                    debt.debt_type === 'i_owe' ? 'text-destructive' : 'text-success'
+                    debt.debt_type === 'to_pay' ? 'text-destructive' : 'text-success'
                   }`}
                 >
                   {formatCurrency(parseFloat(debt.total_amount || 0))}
